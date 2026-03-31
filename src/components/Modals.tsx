@@ -150,8 +150,8 @@ export function SettingsModal({ isOpen, onClose }: ModalProps) {
                   </div>
 
                   <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                    <p className="text-[10px] text-blue-400/80 leading-relaxed">
-                      Default: "You are SteveAI, a highly advanced orchestrator made by saadpie, Ahmed Aftab, and Shawaiz Ali."
+                    <p className="text-[10px] text-blue-400/80 leading-relaxed font-medium">
+                      Core Signature: "SteveAI v4.0 | Advanced Multi-Agent Orchestrator"
                     </p>
                   </div>
                 </>
@@ -194,13 +194,27 @@ export function CreditsModal({ isOpen, onClose }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      fetch("/api/credits")
-        .then(r => r.json())
-        .then(data => {
-          setCredits(data);
+      // Logic for GitHub Pages: Fetch from Firestore instead of a missing local /api
+      const fetchCredits = async () => {
+        try {
+          const docRef = doc(db, "system", "credits");
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setCredits(docSnap.data().providers || []);
+          } else {
+            // Fallback for demo purposes if doc doesn't exist
+            setCredits([
+              { provider: "Gemini Pro", balance: "Unlimited", limit: "Free Tier" },
+              { provider: "GPT-4o", balance: "25", limit: "Daily Reset" }
+            ]);
+          }
+        } catch (error) {
+          console.error("Credit fetch error:", error);
+        } finally {
           setLoading(false);
-        })
-        .catch(() => setLoading(false));
+        }
+      };
+      fetchCredits();
     }
   }, [isOpen]);
 
@@ -261,7 +275,10 @@ export function CreditsModal({ isOpen, onClose }: ModalProps) {
                 <p className="text-xs text-gray-400 leading-relaxed mb-4">
                   Your account is currently on the Developer Tier. Upgrade to Enterprise for higher rate limits and priority mirror access.
                 </p>
-                <button className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => window.location.href = 'mailto:saadabdulrehman2010@gmail.com?subject=Enterprise Upgrade'}
+                  className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2"
+                >
                   Upgrade Now
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -341,7 +358,7 @@ export function ActivityModal({ isOpen, onClose }: ModalProps) {
                   <p className="text-sm font-bold uppercase tracking-widest">No recent activity</p>
                 </div>
               ) : (
-                activities.map((activity) => (
+                activities.map((activity: any) => (
                   <div 
                     key={activity.id}
                     className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group"
@@ -349,7 +366,9 @@ export function ActivityModal({ isOpen, onClose }: ModalProps) {
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-bold text-white truncate pr-4">{activity.title}</p>
                       <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                        {new Date(activity.createdAt).toLocaleDateString()}
+                        {activity.createdAt?.seconds 
+                          ? new Date(activity.createdAt.seconds * 1000).toLocaleDateString() 
+                          : "Recent"}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 line-clamp-1">
@@ -370,4 +389,4 @@ export function ActivityModal({ isOpen, onClose }: ModalProps) {
       )}
     </AnimatePresence>
   );
-}
+                    }
