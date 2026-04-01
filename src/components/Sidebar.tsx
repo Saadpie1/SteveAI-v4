@@ -73,7 +73,7 @@ export default function Sidebar() {
     const path = `users/${user.uid}/sessions/${sessionId}`;
     try {
       await deleteDoc(doc(db, `users/${user.uid}/sessions`, sessionId));
-      if (location.pathname === `/chat/${sessionId}`) {
+      if (location.pathname.includes(sessionId)) {
         navigate("/chat");
       }
     } catch (error) {
@@ -115,7 +115,10 @@ export default function Sidebar() {
     const last7Days = today - 86400000 * 7;
 
     sessions.forEach(session => {
-      const date = session.createdAt;
+      const date = (session.createdAt as any)?.seconds 
+        ? (session.createdAt as any).seconds * 1000 
+        : new Date(session.createdAt).getTime();
+
       let label = "Older";
       if (date >= today) label = "Today";
       else if (date >= yesterday) label = "Yesterday";
@@ -130,22 +133,22 @@ export default function Sidebar() {
 
   const groupedSessions = groupSessions(sessions);
 
+  // Simplified paths: React Router handles the /SteveAI-v4 prefix via basename
   const menuItems = [
-    { icon: MessageSquare, label: "Chat", path: `${import.meta.env.BASE_URL}chat` , color: "text-blue-500" },
-    { icon: ImageIcon, label: "Image", path: `${import.meta.env.BASE_URL}image`, color: "text-purple-500" },
-    { icon: Video, label: "Video", path: `${import.meta.env.BASE_URL}video`, color: "text-red-500" },
-    { icon: Box, label: "3D Gen", path: `${import.meta.env.BASE_URL}3d`, color: "text-green-500" },
+    { icon: MessageSquare, label: "Chat", path: "/chat", color: "text-blue-500" },
+    { icon: ImageIcon, label: "Image", path: "/image", color: "text-purple-500" },
+    { icon: Video, label: "Video", path: "/video", color: "text-red-500" },
+    { icon: Box, label: "3D Gen", path: "/3d", color: "text-green-500" },
   ];
 
-  const isChatPage = location.pathname.startsWith("/chat");
-  const isImagePage = location.pathname === "/image";
-  const isVideoPage = location.pathname === "/video";
-  const isThreeDPage = location.pathname === "/3d";
+  const isChatPage = location.pathname.includes("/chat");
+  const isImagePage = location.pathname.includes("/image");
+  const isVideoPage = location.pathname.includes("/video");
+  const isThreeDPage = location.pathname.includes("/3d");
   const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage;
 
   return (
     <>
-      {/* Mobile Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -174,7 +177,7 @@ export default function Sidebar() {
 
         <button 
           onClick={() => {
-            navigate(`${import.meta.env.BASE_URL}chat`);
+            navigate("/chat");
             setIsOpen(false);
           }}
           className="flex items-center gap-3 px-4 py-3 mb-6 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white hover:bg-white/10 transition-all group"
@@ -252,11 +255,11 @@ export default function Sidebar() {
                           </form>
                         ) : (
                           <Link
-                            to={`${import.meta.env.BASE_URL}chat/${session.id}`}
+                            to={`/chat/${session.id}`}
                             onClick={() => setIsOpen(false)}
                             className={cn(
                               "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all group relative",
-                              location.pathname === `${import.meta.env.BASE_URL}chat/${session.id}`
+                              location.pathname.includes(session.id)
                                 ? "bg-white/5 text-white"
                                 : "text-gray-500 hover:bg-white/5 hover:text-white"
                             )}
