@@ -18,14 +18,15 @@ export default function Navbar() {
   const isThreeDPage = location.pathname === "/3d";
   const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage);
 
+  // Simplified paths: React Router handles the /SteveAI-v4 prefix via basename in main.tsx
   const navLinks = [
-    { name: "Home", path: import.meta.env.BASE_URL },
-    { name: "Chat", path: `${import.meta.env.BASE_URL}chat` },
-    { name: "Image Gen", path: `${import.meta.env.BASE_URL}image` },
-    { name: "Video Gen", path: `${import.meta.env.BASE_URL}video` },
-    { name: "3D Gen", path: `${import.meta.env.BASE_URL}3d` },
-    { name: "Docs", path: `${import.meta.env.BASE_URL}docs` },
-    { name: "About", path: `${import.meta.env.BASE_URL}about` },
+    { name: "Home", path: "/" },
+    { name: "Chat", path: "/chat" },
+    { name: "Image Gen", path: "/image" },
+    { name: "Video Gen", path: "/video" },
+    { name: "3D Gen", path: "/3d" },
+    { name: "Docs", path: "/docs" },
+    { name: "About", path: "/about" },
   ];
 
   return (
@@ -42,7 +43,7 @@ export default function Navbar() {
                 <Menu className="w-6 h-6" />
               </button>
             )}
-            <Link to={import.meta.env.BASE_URL} className="flex items-center gap-2 group">
+            <Link to="/" className="flex items-center gap-2 group">
               <div className="relative">
                 <Cpu className="w-8 h-8 text-blue-500 group-hover:text-blue-400 transition-colors" />
                 <div className="absolute inset-0 bg-blue-500/20 blur-lg rounded-full animate-pulse" />
@@ -90,7 +91,7 @@ export default function Navbar() {
               ) : (
                 <div className="flex items-center gap-4">
                   <Link
-                    to={`${import.meta.env.BASE_URL}login`}
+                    to="/login"
                     className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
                   >
                     Login
@@ -146,7 +147,7 @@ export default function Navbar() {
               <div className="flex flex-col gap-2 pt-4">
                 <Link
                   to="/login"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/10 text-white rounded-md text-base font-medium"
                 >
                   <LogIn className="w-5 h-5" />
@@ -154,7 +155,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   to="/signup"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-blue-600 text-white rounded-md text-base font-medium"
                 >
                   <UserIcon className="w-5 h-5" />
@@ -167,4 +168,4 @@ export default function Navbar() {
       </AnimatePresence>
     </nav>
   );
-}
+            }
