@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom"; // Removed BrowserRouter alias
 import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
@@ -72,7 +72,6 @@ function AnimatedRoutes() {
   const isThreeDPage = location.pathname === "/3d";
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
   const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage) && !isAuthPage;
-  const hideNavbar = isAuthPage;
 
   return (
     <div className="flex min-h-screen bg-black">
@@ -83,56 +82,16 @@ function AnimatedRoutes() {
       )}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={
-              <PageWrapper>
-                <Home />
-              </PageWrapper>
-            } />
-            <Route path="/chat" element={
-              <PageWrapper>
-                <Chat />
-              </PageWrapper>
-            } />
-            <Route path="/chat/:sessionId" element={
-              <PageWrapper>
-                <Chat />
-              </PageWrapper>
-            } />
-            <Route path="/image" element={
-              <PageWrapper>
-                <ImageGen />
-              </PageWrapper>
-            } />
-            <Route path="/video" element={
-              <PageWrapper>
-                <VideoGen />
-              </PageWrapper>
-            } />
-            <Route path="/3d" element={
-              <PageWrapper>
-                <ThreeDGen />
-              </PageWrapper>
-            } />
-            <Route path="/docs" element={
-              <PageWrapper>
-                <Docs />
-              </PageWrapper>
-            } />
-            <Route path="/about" element={
-              <PageWrapper>
-                <About />
-              </PageWrapper>
-            } />
-            <Route path="/login" element={
-              <PageWrapper>
-                <Login />
-              </PageWrapper>
-            } />
-            <Route path="/signup" element={
-              <PageWrapper>
-                <Signup />
-              </PageWrapper>
-            } />
+            <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
+            <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
+            <Route path="/chat/:sessionId" element={<PageWrapper><Chat /></PageWrapper>} />
+            <Route path="/image" element={<PageWrapper><ImageGen /></PageWrapper>} />
+            <Route path="/video" element={<PageWrapper><VideoGen /></PageWrapper>} />
+            <Route path="/3d" element={<PageWrapper><ThreeDGen /></PageWrapper>} />
+            <Route path="/docs" element={<PageWrapper><Docs /></PageWrapper>} />
+            <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
+            <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+            <Route path="/signup" element={<PageWrapper><Signup /></PageWrapper>} />
           </Routes>
         </AnimatePresence>
       </main>
@@ -200,7 +159,6 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Sync user to Firestore
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         
@@ -250,15 +208,8 @@ export default function App() {
         <UserSettingsContext.Provider value={{ settings }}>
           <SidebarContext.Provider value={{ isOpen: isSidebarOpen, setIsOpen: setIsSidebarOpen }}>
             <ModalContext.Provider value={modalValue}>
-              <Router>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="*" element={
-                    <NavbarWrapper />
-                  } />
-                </Routes>
-              </Router>
+              {/* Router and duplicate Routes removed to prevent conflict with main.tsx */}
+              <NavbarWrapper />
               
               {/* Modals */}
               <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -278,7 +229,7 @@ function NavbarWrapper() {
   const isImagePage = location.pathname === "/image";
   const isVideoPage = location.pathname === "/video";
   const isThreeDPage = location.pathname === "/3d";
-  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage;
+  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage || location.pathname === "/login" || location.pathname === "/signup";
 
   return (
     <>
@@ -286,4 +237,5 @@ function NavbarWrapper() {
       <AnimatedRoutes />
     </>
   );
-}
+          }
+      
