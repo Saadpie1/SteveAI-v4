@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>SteveAI Feed</title>
+  <subtitle>The future of AI Orchestration by Saadpie.</subtitle>
+  <link href="https://steve-ai.netlify.app/atom.xml" rel="self"/>
+  <link href="https://steve-ai.netlify.app/"/>
+  <updated>2026-01-07T00:00:00Z</updated>
+  <author>
+    <name>Saadpie</name>
+  </author>
+  <id>https://steve-ai.netlify.app/</id>
+
+  <entry>
+    <title>DeepSeek-R1 Integration</title>
+    <link href="https://steve-ai.netlify.app/chat.html"/>
+    <id>https://steve-ai.netlify.app/news/deepseek-r1</id>
+    <updated>2026-01-07T00:00:00Z</updated>
+    <summary>SteveAI now routes complex reasoning tasks to the DeepSeek-R1 engine.</summary>
+  </entry>
+</feed>

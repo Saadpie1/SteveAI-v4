@@ -1,0 +1,21 @@
+{
+  "name": "SteveAI – Ultimate AI Assistant",
+  "short_name": "SteveAI",
+  "description": "Multi-Modal AI Orchestrator with 100+ Models.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#00ffcc",
+  "icons": [
+    {
+      "src": "SteveAI-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "SteveAI-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

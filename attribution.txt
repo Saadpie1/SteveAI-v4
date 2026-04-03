@@ -1,0 +1,9 @@
+/* STEVEAI ATTRIBUTION & LICENSES */
+
+This project orchestrates the following AI Technologies:
+1. Google Gemini - Terms: https://ai.google.dev/terms
+2. Meta Llama - License: Community License v2
+3. Alibaba Hunyuan3D - License: Apache 2.0
+4. Stable Diffusion XL - License: CreativeML Open RAIL-M
+
+Orchestration Engine v4.0 developed by Saadpie & Ahmed.

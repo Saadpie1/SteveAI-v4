@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>SteveAI Updates</title>
+  <link>https://steve-ai.netlify.app</link>
+  <description>New models and feature releases for SteveAI Orchestrator</description>
+  <item>
+    <title>SteveAI v4.0 Released</title>
+    <link>https://steve-ai.netlify.app/docs.html</link>
+    <description>3D Sculptor and 100+ model routing engine now live.</description>
+  </item>
+</channel>
+</rss>

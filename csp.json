@@ -1,0 +1,7 @@
+{
+  "default-src": ["'self'"],
+  "script-src": ["'self'", "https://pagead2.googlesyndication.com"],
+  "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+  "img-src": ["'self'", "data:", "https://steve-ai.netlify.app"],
+  "connect-src": ["'self'", "https://api.openai.com", "https://api.anthropic.com"]
+}

@@ -1,0 +1,15 @@
+{
+  "@context": "https://schema.org",
+  "@type": "AIPlatform",
+  "name": "SteveAI",
+  "alternateName": "SteveAI Orchestrator",
+  "url": "https://steve-ai.netlify.app",
+  "logo": "https://steve-ai.netlify.app/SteveAI-logo.jpg",
+  "sameAs": [
+    "https://github.com/Saadpie1"
+  ],
+  "description": "Multi-Modal AI Orchestrator providing access to 100+ conversational and 23+ visual models.",
+  "softwareVersion": "4.0.0",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All"
+}

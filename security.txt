@@ -1,0 +1,6 @@
+Contact: mailto:saadabdulrehman2010@gmail.com
+Expires: 2027-01-01T00:00:00.000Z
+Acknowledgements: https://steve-ai.netlify.app/about.html
+Preferred-Languages: en
+Canonical: https://steve-ai.netlify.app/.well-known/security.txt
+Policy: https://steve-ai.netlify.app/docs.html

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /private/
+Disallow: /config/
+
+User-agent: *
+Allow: /models.html
+# Hint to Google that this is the most important page after index
+Priority: /models.html 0.9
+
+# Link to your sitemap (Next step)
+Sitemap: https://steve-ai.netlify.app/sitemap.xml
