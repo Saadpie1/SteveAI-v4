@@ -5,20 +5,26 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  
   return {
-    base: '/SteveAI-v4/', 
+    // CHANGE: Set to '/' for Vercel deployment. 
+    // '/SteveAI-v4/' is only for GitHub Pages.
+    base: '/', 
+    
     plugins: [react(), tailwindcss()],
+    
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
+    
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    
     server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // ADD THIS PROXY:
+      // This helps with local development
       proxy: {
         '/api': {
           target: 'http://localhost:3000',
@@ -27,5 +33,10 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+
+    // Optional: Ensure build output goes to 'dist' (Vercel's default)
+    build: {
+      outDir: 'dist',
+    }
   };
 });
