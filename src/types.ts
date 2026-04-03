@@ -36,9 +36,9 @@ export interface UserSettings {
 
 export const MODELS: AIModel[] = [
   { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', provider: 'groq', type: 'text' },
-  { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 (Groq)', provider: 'groq', type: 'text' },
-  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (OpenRouter)', provider: 'openrouter', type: 'text' },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20b (Groq)', provider: 'groq', type: 'text' },
+  { id: 'qwen/qwen3.6-plus:free', name: 'Qwen 3.6 plus (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'stepfun/step-3.5-flash:free', name: 'Step 3.5 flash (OpenRouter)', provider: 'openrouter', type: 'text' },
   { id: 'gemini', name: 'Gemini Fast (Pollinations)', provider: 'pollinations', type: 'text' },
   { id: 'gpt-4', name: 'GPT-4 (G4F)', provider: 'g4f', type: 'text' },
   { id: 'claude-3-opus', name: 'Claude 3 Opus (G4F)', provider: 'g4f', type: 'text' },
