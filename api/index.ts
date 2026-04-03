@@ -59,7 +59,14 @@ app.post("/api/chat", async (req, res) => {
           temperature: 0.7
         })
       });
+      
       const data = await response.json();
+      
+      // ERROR SURGERY: If API fails, send back the message from Groq
+      if (!response.ok) {
+        return res.status(response.status).json({ content: `Groq Error: ${data.error?.message || 'Unknown Error'}` });
+      }
+      
       return res.json({ content: data.choices?.[0]?.message?.content || "No response from Groq" });
     }
 
@@ -79,7 +86,14 @@ app.post("/api/chat", async (req, res) => {
           ]
         })
       });
+      
       const data = await response.json();
+
+      // ERROR SURGERY: If API fails, send back the message from OpenRouter
+      if (!response.ok) {
+        return res.status(response.status).json({ content: `OpenRouter Error: ${data.error?.message || 'Unknown Error'}` });
+      }
+
       return res.json({ content: data.choices?.[0]?.message?.content || "No response from OpenRouter" });
     }
 
@@ -109,6 +123,11 @@ app.post("/api/chat", async (req, res) => {
         })
       });
       const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ content: `G4F Error: ${data.error?.message || 'Unknown'}` });
+      }
+
       return res.json({ content: data.choices?.[0]?.message?.content || "No response from G4F" });
     }
     res.status(400).json({ error: "Invalid provider" });
@@ -200,4 +219,3 @@ app.get("/api/models", async (req, res) => {
 
 // IMPORTANT: Export for Vercel
 export default app;
-  
