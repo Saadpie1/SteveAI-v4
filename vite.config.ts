@@ -5,9 +5,7 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  
   return {
-    // Keep your base for GitHub Pages if applicable
     base: '/SteveAI-v4/', 
     plugins: [react(), tailwindcss()],
     define: {
@@ -20,10 +18,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
-      // --- ADD THIS PROXY SECTION ---
+      // ADD THIS PROXY:
       proxy: {
         '/api': {
-          target: 'http://localhost:3000', // Your Express Server Port
+          target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,
         },
