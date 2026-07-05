@@ -8,3 +8,7 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('beforeinstallprompt fired! 🎉');
+  // e.preventDefault(); // Uncomment this if you want to store the event and show it later!
+});
