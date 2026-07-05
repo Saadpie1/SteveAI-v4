@@ -61,50 +61,83 @@ service cloud.firestore {
     }
 
     function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+      return request.resource.data.keys().hasAll([]) && 
+             request.resource.data.diff({}).affectedKeys().hasOnly(fields);
     }
 
     // ===============================================================
     // Domain Validators
     // ===============================================================
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'role']) &&
-             data.uid == request.auth.uid &&
-             data.email is string && isValidEmail(data.email) &&
-             data.role in ['user', 'admin'];
+      // On create, all these are usually present. On update, only modified.
+      // We check that IF a field is present, it's valid.
+      // Required on create via the 'create' rule itself or by checking resource.data.keys()
+      return hasOnlyAllowedFields(['uid', 'displayName', 'username', 'email', 'photoURL', 'dob', 'bio', 'location', 'createdAt', 'updatedAt', 'role']) &&
+             (data.get('uid', null) == null || data.uid == request.auth.uid) &&
+             (data.get('email', null) == null || (data.email is string && isValidEmail(data.email))) &&
+             (data.get('role', null) == null || data.role in ['user', 'admin']);
     }
 
     function isValidSession(data, userId) {
       return hasOnlyAllowedFields(['id', 'title', 'createdAt', 'lastMessage', 'userId']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
-             data.createdAt is number &&
-             data.userId == userId &&
-             data.userId == request.auth.uid;
+             (data.get('title', null) == null || (data.title is string && data.title.size() > 0 && data.title.size() <= 100)) &&
+             (data.get('createdAt', null) == null || data.createdAt is number) &&
+             (data.get('userId', null) == null || (data.userId == userId && data.userId == request.auth.uid));
     }
 
     function isValidMessage(data, userId) {
-      return hasOnlyAllowedFields(['id', 'role', 'content', 'timestamp', 'model', 'userId']) &&
-             data.role in ['user', 'assistant'] &&
-             data.content is string && data.content.size() <= 10000 &&
-             data.userId == userId &&
-             data.userId == request.auth.uid;
+      return hasOnlyAllowedFields(['id', 'role', 'content', 'imageUrl', 'timestamp', 'model', 'userId']) &&
+             (data.get('role', null) == null || data.role in ['user', 'assistant']) &&
+             (data.get('content', null) == null || (data.content is string && data.content.size() <= 20000)) &&
+             (data.get('imageUrl', null) == null || (data.imageUrl is string || data.imageUrl == null)) &&
+             (data.get('userId', null) == null || (data.userId == userId && data.userId == request.auth.uid));
+    }
+
+    function isValidAgentMessage(data, userId) {
+      return hasOnlyAllowedFields(['id', 'role', 'content', 'timestamp', 'userId', 'tool_calls', 'tool_call_id', 'name']) &&
+             (data.get('role', null) == null || data.role in ['user', 'assistant', 'tool']) &&
+             (data.get('content', null) == null || (data.content is string && data.content.size() <= 30000)) &&
+             (data.get('userId', null) == null || (data.userId == userId && data.userId == request.auth.uid));
+    }
+
+    function isValidFeedback(data) {
+      return hasOnlyAllowedFields(['id', 'rating', 'feedback', 'userId', 'userEmail', 'createdAt']) &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.userId == request.auth.uid &&
+             (data.get('feedback', null) == null || (data.feedback is string && data.feedback.size() <= 2000));
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
+    // Feedback Rules
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && 
+                      request.resource.data.keys().hasAll(['rating', 'userId', 'createdAt']) &&
+                      isValidFeedback(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
     // User Profile Rules
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['uid', 'email', 'role']) &&
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.get('role', resource.data.role) == resource.data.role || isAdmin());
     }
 
     // Chat Session Rules
     match /users/{userId}/sessions/{sessionId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidSession(request.resource.data, userId);
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['title', 'createdAt', 'userId']) &&
+                      isValidSession(request.resource.data, userId);
       allow update: if isOwner(userId) && isValidSession(request.resource.data, userId);
       allow delete: if isOwner(userId) || isAdmin();
     }
@@ -112,8 +145,30 @@ service cloud.firestore {
     // Chat Message Rules
     match /users/{userId}/sessions/{sessionId}/messages/{messageId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidMessage(request.resource.data, userId);
-      allow update: if false; // Messages are immutable
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['role', 'content', 'timestamp', 'userId']) &&
+                      isValidMessage(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidMessage(request.resource.data, userId);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Agent Session Rules
+    match /users/{userId}/agent_sessions/{sessionId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['title', 'createdAt', 'userId']) &&
+                      isValidSession(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidSession(request.resource.data, userId);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Agent Message Rules
+    match /users/{userId}/agent_sessions/{sessionId}/messages/{messageId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['role', 'content', 'timestamp', 'userId']) &&
+                      isValidAgentMessage(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidAgentMessage(request.resource.data, userId);
       allow delete: if isOwner(userId) || isAdmin();
     }
 
@@ -123,6 +178,11 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidMessage(request.resource.data, userId);
       allow update: if false;
       allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Connectivity Test Rules
+    match /test/{allPaths=**} {
+      allow read: if true;
     }
 
     // Default deny

@@ -39,3 +39,76 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Markdown & Code Block Styling */
+.prose pre {
+  @apply relative rounded-xl border border-white/10 bg-black/50 p-0 my-4;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  @apply block p-4 text-xs font-mono leading-relaxed;
+  min-width: 100%;
+  width: max-content;
+}
+
+.prose code:not(pre code) {
+  @apply bg-white/10 px-1.5 py-0.5 rounded-md text-xs font-mono text-blue-400;
+}
+
+.table-container {
+  @apply w-full overflow-x-auto my-6 rounded-xl border border-white/10 bg-black/20;
+}
+
+.table-container table {
+  @apply min-w-[500px] w-full my-0 border-none;
+}
+
+.prose th {
+  @apply py-3 px-4 bg-white/5 border-b border-white/10 text-left font-bold text-gray-300 whitespace-nowrap;
+}
+
+.prose td {
+  @apply py-3 px-4 border-b border-white/5 text-gray-400;
+}
+
+.prose pre.no-wrap code {
+  white-space: pre !important;
+  word-break: normal !important;
+}
+
+.prose pre.wrap code {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
+
+.copy-button {
+  @apply absolute top-2 right-2 p-1.5 rounded-lg bg-black/80 border border-white/10 text-gray-500 hover:text-white hover:bg-black transition-all opacity-0 group-hover:opacity-100 z-10;
+}
+
+.think-block summary::-webkit-details-marker {
+  display: none;
+}
+
+/* React RND Resize Handles */
+.react-resizable-handle {
+  z-index: 100 !important;
+  opacity: 0 !important; /* Hide the default invisible handle but keep it grabbable */
+}
+
+/* Ensure the bottom-right handle is extra grabby */
+.react-resizable-handle-se {
+  width: 40px !important;
+  height: 40px !important;
+  cursor: nwse-resize !important;
+  bottom: 0 !important;
+  right: 0 !important;
+}
+
+@media (max-width: 1024px) {
+  .react-resizable-handle-se {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}

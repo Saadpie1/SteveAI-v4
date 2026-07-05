@@ -6,9 +6,13 @@
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Unique Firebase Auth ID" },
-        "displayName": { "type": "string", "description": "User's display name" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "username": { "type": "string", "description": "User's unique handled" },
         "email": { "type": "string", "format": "email", "description": "User's email address" },
         "photoURL": { "type": "string", "format": "uri", "description": "User's profile picture URL" },
+        "dob": { "type": "string", "format": "date", "description": "User's date of birth" },
+        "bio": { "type": "string", "description": "User's short biography" },
+        "location": { "type": "string", "description": "User's geographical location" },
         "createdAt": { "type": "string", "format": "date-time", "description": "When the user first signed in" },
         "role": { "type": "string", "enum": ["user", "admin"], "description": "User's role in the system" }
       },
@@ -22,6 +26,7 @@
         "id": { "type": "string", "description": "Unique message ID" },
         "role": { "type": "string", "enum": ["user", "assistant"], "description": "Who sent the message" },
         "content": { "type": "string", "description": "The text content of the message" },
+        "imageUrl": { "type": "string", "description": "Optional base64 image URL or path" },
         "timestamp": { "type": "number", "description": "Unix timestamp of the message" },
         "model": { "type": "string", "description": "The AI model used for the response" },
         "userId": { "type": "string", "description": "The ID of the user who owns this message" }
@@ -40,9 +45,43 @@
         "userId": { "type": "string", "description": "The ID of the user who owns this session" }
       },
       "required": ["title", "createdAt", "userId"]
+    },
+    "AgentMessage": {
+      "title": "Agent Message",
+      "description": "A single message in an agent conversation including tool calls.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique message ID" },
+        "role": { "type": "string", "enum": ["user", "assistant", "tool"], "description": "Who sent the message" },
+        "content": { "type": "string", "description": "The text content or tool response" },
+        "timestamp": { "type": "number", "description": "Unix timestamp" },
+        "userId": { "type": "string", "description": "The ID of the user" },
+        "tool_calls": { "type": "array", "description": "Optional tool calls from assistant" },
+        "tool_call_id": { "type": "string", "description": "ID for tool response correlation" },
+        "name": { "type": "string", "description": "Name of the tool" }
+      },
+      "required": ["role", "content", "timestamp", "userId"]
+    },
+    "Feedback": {
+      "title": "Document Feedback",
+      "description": "User ratings and feedback for the documentation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique feedback ID" },
+        "rating": { "type": "number", "description": "Rating from 1 to 5" },
+        "feedback": { "type": "string", "description": "Text feedback from the user" },
+        "userId": { "type": "string", "description": "The user ID of the person providing feedback" },
+        "userEmail": { "type": "string", "description": "The email of the person providing feedback" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the feedback was submitted" }
+      },
+      "required": ["rating", "userId", "createdAt"]
     }
   },
   "firestore": {
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Global collection for user documentation feedback"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "User profile documents"
@@ -54,6 +93,18 @@
     "/users/{userId}/sessions/{sessionId}/messages/{messageId}": {
       "schema": "ChatMessage",
       "description": "Individual chat messages for a specific session"
+    },
+    "/users/{userId}/agent_sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "Agent chat sessions"
+    },
+    "/users/{userId}/agent_sessions/{sessionId}/messages/{messageId}": {
+      "schema": "AgentMessage",
+      "description": "Agent messages and tool evaluations"
+    },
+    "/test/{any}": {
+      "schema": { "type": "object", "properties": { "status": { "type": "string" } } },
+      "description": "Connectivity test path"
     }
   }
 }

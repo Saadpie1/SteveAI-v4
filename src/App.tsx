@@ -1,8 +1,8 @@
-import { Routes, Route, useLocation } from "react-router-dom"; // Removed BrowserRouter alias
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth, db } from "./firebase";
+import { auth, db, handleFirestoreError, OperationType } from "./firebase";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
@@ -10,10 +10,14 @@ import Chat from "./pages/Chat";
 import ImageGen from "./pages/ImageGen";
 import Docs from "./pages/Docs";
 import About from "./pages/About";
+import Agent from "./pages/Agent";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VideoGen from "./pages/VideoGen";
 import ThreeDGen from "./pages/ThreeDGen";
+import Models from "./pages/Models";
+import Profile from "./pages/Profile";
+import { Live } from "./pages/Live";
 import { cn } from "./lib/utils";
 import { doc, setDoc, getDoc, onSnapshot as onSnapshotDoc } from "firebase/firestore";
 import { UserSettings } from "./types";
@@ -70,8 +74,12 @@ function AnimatedRoutes() {
   const isImagePage = location.pathname === "/image";
   const isVideoPage = location.pathname === "/video";
   const isThreeDPage = location.pathname === "/3d";
+  const isModelsPage = location.pathname === "/models";
+  const isLivePage = location.pathname === "/live";
+  const isAgentPage = location.pathname === "/agent";
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
-  const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage) && !isAuthPage;
+  const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage || isModelsPage || isLivePage || isAgentPage) && !isAuthPage;
+  const hideNavbar = isAuthPage;
 
   return (
     <div className="flex min-h-screen bg-black">
@@ -81,17 +89,82 @@ function AnimatedRoutes() {
         (showSidebar && isOpen) ? "lg:ml-72" : "ml-0"
       )}>
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
-            <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
-            <Route path="/chat/:sessionId" element={<PageWrapper><Chat /></PageWrapper>} />
-            <Route path="/image" element={<PageWrapper><ImageGen /></PageWrapper>} />
-            <Route path="/video" element={<PageWrapper><VideoGen /></PageWrapper>} />
-            <Route path="/3d" element={<PageWrapper><ThreeDGen /></PageWrapper>} />
-            <Route path="/docs" element={<PageWrapper><Docs /></PageWrapper>} />
-            <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
-            <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
-            <Route path="/signup" element={<PageWrapper><Signup /></PageWrapper>} />
+          <Routes location={location} key={location.pathname.split('/')[1] || "home"}>
+            <Route path="/" element={
+              <PageWrapper>
+                <Home />
+              </PageWrapper>
+            } />
+            <Route path="/chat" element={
+              <PageWrapper>
+                <Chat />
+              </PageWrapper>
+            } />
+            <Route path="/chat/:sessionId" element={
+              <PageWrapper>
+                <Chat />
+              </PageWrapper>
+            } />
+            <Route path="/image" element={
+              <PageWrapper>
+                <ImageGen />
+              </PageWrapper>
+            } />
+            <Route path="/video" element={
+              <PageWrapper>
+                <VideoGen />
+              </PageWrapper>
+            } />
+            <Route path="/3d" element={
+              <PageWrapper>
+                <ThreeDGen />
+              </PageWrapper>
+            } />
+            <Route path="/models" element={
+              <PageWrapper>
+                <Models />
+              </PageWrapper>
+            } />
+            <Route path="/live" element={
+              <PageWrapper>
+                <Live />
+              </PageWrapper>
+            } />
+            <Route path="/profile" element={
+              <PageWrapper>
+                <Profile />
+              </PageWrapper>
+            } />
+            <Route path="/docs" element={
+              <PageWrapper>
+                <Docs />
+              </PageWrapper>
+            } />
+            <Route path="/about" element={
+              <PageWrapper>
+                <About />
+              </PageWrapper>
+            } />
+            <Route path="/agent" element={
+              <PageWrapper>
+                <Agent />
+              </PageWrapper>
+            } />
+            <Route path="/agent/:sessionId" element={
+              <PageWrapper>
+                <Agent />
+              </PageWrapper>
+            } />
+            <Route path="/login" element={
+              <PageWrapper>
+                <Login />
+              </PageWrapper>
+            } />
+            <Route path="/signup" element={
+              <PageWrapper>
+                <Signup />
+              </PageWrapper>
+            } />
           </Routes>
         </AnimatePresence>
       </main>
@@ -158,26 +231,32 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL,
-            createdAt: new Date().toISOString(),
-            role: "user"
-          });
+      try {
+        if (user) {
+          // Sync user to Firestore
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              uid: user.uid,
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL,
+              createdAt: new Date().toISOString(),
+              role: "user"
+            });
+          }
+          setUser(user);
+        } else {
+          setUser(null);
+          setSettings(null);
         }
-        setUser(user);
-      } else {
-        setUser(null);
-        setSettings(null);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, "users/" + user?.uid);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -191,6 +270,8 @@ export default function App() {
       if (doc.exists()) {
         setSettings(doc.data() as UserSettings);
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, "users/" + user.uid);
     });
 
     return () => unsubscribe();
@@ -208,8 +289,15 @@ export default function App() {
         <UserSettingsContext.Provider value={{ settings }}>
           <SidebarContext.Provider value={{ isOpen: isSidebarOpen, setIsOpen: setIsSidebarOpen }}>
             <ModalContext.Provider value={modalValue}>
-              {/* Router and duplicate Routes removed to prevent conflict with main.tsx */}
-              <NavbarWrapper />
+              <Router>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="*" element={
+                    <NavbarWrapper />
+                  } />
+                </Routes>
+              </Router>
               
               {/* Modals */}
               <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -229,7 +317,11 @@ function NavbarWrapper() {
   const isImagePage = location.pathname === "/image";
   const isVideoPage = location.pathname === "/video";
   const isThreeDPage = location.pathname === "/3d";
-  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage || location.pathname === "/login" || location.pathname === "/signup";
+  const isModelsPage = location.pathname === "/models";
+  const isLivePage = location.pathname === "/live";
+  const isProfilePage = location.pathname === "/profile";
+  const isAgentPage = location.pathname === "/agent";
+  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage || isAgentPage;
 
   return (
     <>
@@ -237,5 +329,4 @@ function NavbarWrapper() {
       <AnimatedRoutes />
     </>
   );
-          }
-      
+}

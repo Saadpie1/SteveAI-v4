@@ -1,37 +1,36 @@
 import { AIModel, Message, MODELS } from "../types";
 
 export async function fetchAvailableModels(): Promise<AIModel[]> {
-  const allModels: AIModel[] = [...MODELS];
+  // Deep copy so we don't mutate everything globally
+  const allModels: AIModel[] = MODELS.map(m => ({ ...m }));
   
-  try {
-    const response = await fetch("/api/models");
-    if (response.ok) {
-      const data = await response.json();
-      
-      const orModels = data.openrouter.map((m: any) => ({
-        id: m.id,
-        name: `${m.name} (OpenRouter)`,
-        provider: 'openrouter',
-        type: 'text'
-      }));
-      
-      const groqModels = data.groq.map((m: any) => ({
-        id: m.id,
-        name: `${m.id} (Groq)`,
-        provider: 'groq',
-        type: 'text'
-      }));
-      
-      allModels.push(...orModels, ...groqModels);
+  const attemptFetch = async (retries = 2): Promise<AIModel[]> => {
+    try {
+      const response = await fetch("/api/models/status");
+      if (response.ok) {
+        const statuses = await response.json();
+        
+        return allModels.map(m => ({
+          ...m,
+          status: statuses[m.id] === 'ok' ? 'ok' : 'error'
+        }));
+      } else {
+        console.warn(`Model status API returned ${response.status}`);
+      }
+    } catch (err) {
+      if (retries > 0) {
+        console.log(`Retrying model status fetch... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return attemptFetch(retries - 1);
+      }
+      console.error("Failed to fetch model statuses after retries:", err);
     }
-  } catch (err) {
-    console.error("Failed to fetch dynamic models:", err);
-  }
+    
+    // Fallback if status fetch fails
+    return allModels.map(m => ({ ...m, status: 'ok' }));
+  };
 
-  // Remove duplicates by ID
-  return allModels.filter((model, index, self) =>
-    index === self.findIndex((t) => t.id === model.id)
-  );
+  return attemptFetch();
 }
 
 export async function generateImage(prompt: string, modelId: string = 'flux'): Promise<string | null> {
@@ -73,28 +72,27 @@ export async function getVideoStatus(requestId: string): Promise<{ status: strin
   };
 }
 
-export async function getChatResponse(userMessage: string, model: AIModel, systemInstruction?: string): Promise<string> {
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        provider: model.provider,
-        modelId: model.id,
-        message: userMessage,
-        systemInstruction: systemInstruction
-      })
-    });
+export async function getChatResponse(message: any, model: AIModel, history: Message[] = [], systemInstruction?: string): Promise<string> {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      provider: model.provider,
+      modelId: model.id,
+      message: message,
+      history: history.map(m => ({ role: m.role, content: m.content })),
+      systemInstruction: systemInstruction
+    })
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Server Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.content;
-  } catch (error: any) {
-    console.error("Chat API Error:", error);
-    return `Error: ${error.message || "Failed to get response from AI"}`;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Server Error: ${response.status}`);
   }
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error);
+  }
+  return data.content;
 }

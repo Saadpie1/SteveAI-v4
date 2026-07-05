@@ -4,6 +4,7 @@ import {
   Image as ImageIcon, 
   Video, 
   Box, 
+  Server,
   Settings, 
   History,
   Zap,
@@ -13,7 +14,8 @@ import {
   Loader2,
   X,
   Edit2,
-  Check
+  Check,
+  Radio
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -30,7 +32,9 @@ export default function Sidebar() {
   const { isOpen, setIsOpen } = useSidebar();
   const { openSettings, openCredits, openActivity } = useModals();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [agentSessions, setAgentSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
+  const [agentLoading, setAgentLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
@@ -43,6 +47,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (!user) {
       setSessions([]);
+      setAgentSessions([]);
       return;
     }
 
@@ -62,19 +67,41 @@ export default function Sidebar() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Agent Sessions
+    setAgentLoading(true);
+    const agentPath = `users/${user.uid}/agent_sessions`;
+    const aq = query(collection(db, agentPath), orderBy("createdAt", "desc"));
+    const unsubAgent = onSnapshot(aq, (snapshot) => {
+      const sess = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatSession[];
+      setAgentSessions(sess);
+      setAgentLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, agentPath);
+      setAgentLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubAgent();
+    };
   }, [user]);
 
-  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
+  const deleteSession = async (e: React.MouseEvent, sessionId: string, type: 'chat' | 'agent' = 'chat') => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) return;
     
-    const path = `users/${user.uid}/sessions/${sessionId}`;
+    const collectionName = type === 'chat' ? 'sessions' : 'agent_sessions';
+    const path = `users/${user.uid}/${collectionName}/${sessionId}`;
     try {
-      await deleteDoc(doc(db, `users/${user.uid}/sessions`, sessionId));
-      if (location.pathname.includes(sessionId)) {
+      await deleteDoc(doc(db, `users/${user.uid}/${collectionName}`, sessionId));
+      if (type === 'chat' && location.pathname === `/chat/${sessionId}`) {
         navigate("/chat");
+      } else if (type === 'agent' && location.pathname === `/agent/${sessionId}`) {
+        navigate("/agent");
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
@@ -88,7 +115,7 @@ export default function Sidebar() {
     setEditTitle(session.title);
   };
 
-  const saveRename = async (e: React.FormEvent | React.MouseEvent, sessionId: string) => {
+  const saveRename = async (e: React.FormEvent | React.MouseEvent, sessionId: string, type: 'chat' | 'agent' = 'chat') => {
     e.preventDefault();
     e.stopPropagation();
     if (!user || !editTitle.trim()) {
@@ -96,9 +123,10 @@ export default function Sidebar() {
       return;
     }
 
-    const path = `users/${user.uid}/sessions/${sessionId}`;
+    const collectionName = type === 'chat' ? 'sessions' : 'agent_sessions';
+    const path = `users/${user.uid}/${collectionName}/${sessionId}`;
     try {
-      await updateDoc(doc(db, `users/${user.uid}/sessions`, sessionId), {
+      await updateDoc(doc(db, `users/${user.uid}/${collectionName}`, sessionId), {
         title: editTitle.trim()
       });
       setEditingId(null);
@@ -107,18 +135,15 @@ export default function Sidebar() {
     }
   };
 
-  const groupSessions = (sessions: ChatSession[]) => {
+  const groupSessions = (sess: ChatSession[]) => {
     const groups: { [key: string]: ChatSession[] } = {};
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const yesterday = today - 86400000;
     const last7Days = today - 86400000 * 7;
 
-    sessions.forEach(session => {
-      const date = (session.createdAt as any)?.seconds 
-        ? (session.createdAt as any).seconds * 1000 
-        : new Date(session.createdAt).getTime();
-
+    sess.forEach(session => {
+      const date = session.createdAt;
       let label = "Older";
       if (date >= today) label = "Today";
       else if (date >= yesterday) label = "Yesterday";
@@ -132,23 +157,29 @@ export default function Sidebar() {
   };
 
   const groupedSessions = groupSessions(sessions);
+  const groupedAgentSessions = groupSessions(agentSessions);
 
-  // Simplified paths: React Router handles the /SteveAI-v4 prefix via basename
   const menuItems = [
     { icon: MessageSquare, label: "Chat", path: "/chat", color: "text-blue-500" },
+    { icon: Zap, label: "Agent", path: "/agent", color: "text-blue-500" },
+    { icon: Radio, label: "Live", path: "/live", color: "text-orange-500" },
     { icon: ImageIcon, label: "Image", path: "/image", color: "text-purple-500" },
     { icon: Video, label: "Video", path: "/video", color: "text-red-500" },
     { icon: Box, label: "3D Gen", path: "/3d", color: "text-green-500" },
   ];
 
-  const isChatPage = location.pathname.includes("/chat");
-  const isImagePage = location.pathname.includes("/image");
-  const isVideoPage = location.pathname.includes("/video");
-  const isThreeDPage = location.pathname.includes("/3d");
-  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage;
+  const isChatPage = location.pathname.startsWith("/chat");
+  const isImagePage = location.pathname === "/image";
+  const isVideoPage = location.pathname === "/video";
+  const isThreeDPage = location.pathname === "/3d";
+  const isModelsPage = location.pathname === "/models";
+  const isLivePage = location.pathname === "/live";
+  const isAgentPage = location.pathname === "/agent";
+  const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage || isLivePage || isAgentPage;
 
   return (
     <>
+      {/* Mobile Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -177,13 +208,14 @@ export default function Sidebar() {
 
         <button 
           onClick={() => {
-            navigate("/chat");
+            const path = isAgentPage ? "/agent" : "/chat";
+            navigate(path);
             setIsOpen(false);
           }}
-          className="flex items-center gap-3 px-4 py-3 mb-6 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white hover:bg-white/10 transition-all group"
+          className="flex items-center gap-3 px-4 py-3 mb-6 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white hover:bg-white/10 transition-all group w-full"
         >
-          <Plus className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" />
-          New Chat
+          <Plus className={cn("w-5 h-5 transition-transform group-hover:scale-110", isAgentPage ? "text-blue-500" : "text-blue-500")} />
+          {isAgentPage ? "New Agent Session" : "New Chat"}
         </button>
 
         <div className="space-y-1 mb-8">
@@ -215,6 +247,7 @@ export default function Sidebar() {
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-6">
+          {/* Chat History Section */}
           <div>
             <div className="flex items-center justify-between px-3 mb-4">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
@@ -232,21 +265,21 @@ export default function Sidebar() {
               ) : (
                 Object.entries(groupedSessions).map(([label, groupSessions]) => (
                   <div key={label} className="space-y-1">
-                    <p className="px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">
+                    <p className="px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2 text-zinc-700">
                       {label}
                     </p>
                     {groupSessions.map((session) => (
                       <div key={session.id} className="relative group">
                         {editingId === session.id ? (
                           <form 
-                            onSubmit={(e) => saveRename(e, session.id)}
+                            onSubmit={(e) => saveRename(e, session.id, 'chat')}
                             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10"
                           >
                             <input
                               autoFocus
                               value={editTitle}
                               onChange={(e) => setEditTitle(e.target.value)}
-                              onBlur={(e) => saveRename(e, session.id)}
+                              onBlur={(e) => saveRename(e, session.id, 'chat')}
                               className="bg-transparent text-xs text-white outline-none w-full"
                             />
                             <button type="submit" className="text-green-500 hover:text-green-400">
@@ -259,7 +292,7 @@ export default function Sidebar() {
                             onClick={() => setIsOpen(false)}
                             className={cn(
                               "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all group relative",
-                              location.pathname.includes(session.id)
+                              location.pathname === `/chat/${session.id}`
                                 ? "bg-white/5 text-white"
                                 : "text-gray-500 hover:bg-white/5 hover:text-white"
                             )}
@@ -268,14 +301,102 @@ export default function Sidebar() {
                             <span className="truncate pr-12">{session.title}</span>
                             <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                               <button
-                                onClick={(e) => startEditing(e, session)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setEditingId(session.id);
+                                  setEditTitle(session.title);
+                                }}
                                 className="p-1 hover:text-blue-400 transition-all"
                                 title="Rename"
                               >
                                 <Edit2 className="w-3 h-3" />
                               </button>
                               <button
-                                onClick={(e) => deleteSession(e, session.id)}
+                                onClick={(e) => deleteSession(e, session.id, 'chat')}
+                                className="p-1 hover:text-red-500 transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Agent History Section */}
+          <div>
+            <div className="flex items-center justify-between px-3 mb-4">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                Agent History
+              </p>
+            </div>
+            
+            <div className="space-y-6">
+              {agentLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
+                </div>
+              ) : agentSessions.length === 0 ? (
+                <p className="px-3 text-[10px] text-gray-600 italic">No recent agents</p>
+              ) : (
+                Object.entries(groupedAgentSessions).map(([label, groupSessions]) => (
+                  <div key={label} className="space-y-1">
+                    <p className="px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2 text-zinc-700">
+                      {label}
+                    </p>
+                    {groupSessions.map((session) => (
+                      <div key={session.id} className="relative group">
+                        {editingId === session.id ? (
+                          <form 
+                            onSubmit={(e) => saveRename(e, session.id, 'agent')}
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10"
+                          >
+                            <input
+                              autoFocus
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              onBlur={(e) => saveRename(e, session.id, 'agent')}
+                              className="bg-transparent text-xs text-white outline-none w-full"
+                            />
+                            <button type="submit" className="text-green-500 hover:text-green-400">
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </form>
+                        ) : (
+                          <Link
+                            to={`/agent/${session.id}`}
+                            onClick={() => setIsOpen(false)}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all group relative",
+                              location.pathname === `/agent/${session.id}`
+                                ? "bg-white/5 text-white"
+                                : "text-gray-500 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            <Server className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate pr-12">{session.title}</span>
+                            <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setEditingId(session.id);
+                                  setEditTitle(session.title);
+                                }}
+                                className="p-1 hover:text-blue-400 transition-all"
+                                title="Rename"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => deleteSession(e, session.id, 'agent')}
                                 className="p-1 hover:text-red-500 transition-all"
                                 title="Delete"
                               >
@@ -310,16 +431,6 @@ export default function Sidebar() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-bold text-white">v4.0 Active</span>
-          </div>
-          <p className="text-[10px] text-gray-400 leading-relaxed">
-            Orchestrating 100+ models with proprietary routing engine.
-          </p>
         </div>
       </aside>
     </>
