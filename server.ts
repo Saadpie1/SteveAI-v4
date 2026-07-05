@@ -33,17 +33,17 @@ function getGeminiClient(): GoogleGenAI {
 
 const CONFIG = {
   cf: {
-    accountId: process.env.CF_ACCOUNT_ID || "ac73028e2d0141fe300f1e9b37e29485",
-    token: process.env.CF_TOKEN || "cfut_P7JIBJxXemwlaef8hvqSAohLOfxOr36SPIpqZ3L36ac14b03",
+    accountId: process.env.CF_ACCOUNT_ID || "",
+    token: process.env.CF_TOKEN || "",
   },
   pollinations: {
-    apiKey: process.env.POLLINATIONS_API_KEY || "sk_GPIaqPVYmvtCkIZlDdpM6teovDHu6DGk",
+    apiKey: process.env.POLLINATIONS_API_KEY || "",
   },
   groq: {
-    apiKey: "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" // Using user provided key directly
+    apiKey: process.env.GROQ_API_KEY || ""
   },
   g4f: {
-    apiKey: process.env.G4F_API_KEY || "g4f_u_mm0nf9_b0d03c0f02970cd1cc4339ee909ee3d5c208d3d7e9d0d353_5daddaa1"
+    apiKey: process.env.G4F_API_KEY || ""
   },
   siliconflow: {
     apiKey: (process.env.SILICONFLOW_API_KEY || "").trim()
