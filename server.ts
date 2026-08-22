@@ -138,7 +138,15 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(cors());
-  app.use(express.json());
+  
+  // Fix for serverless environments (like Vercel) where req.body is already parsed
+  app.use((req, res, next) => {
+    if (req.body && Object.keys(req.body).length > 0) {
+      next();
+    } else {
+      express.json({ limit: '50mb' })(req, res, next);
+    }
+  });
 
   // API Routes
   app.get("/api/health", (req, res) => {
