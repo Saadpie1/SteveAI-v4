@@ -42,6 +42,7 @@ function AdBanner({ zone }: { zone: "top" | "bottom" }) {
       )}
     >
       {zone === "top" ? (
+        /* 300x250 Medium Banner Container */
         <iframe
           srcDoc={`
             <!DOCTYPE html>
@@ -50,41 +51,34 @@ function AdBanner({ zone }: { zone: "top" | "bottom" }) {
               <body>
                 <script>
                   var atOptions = {
-                    'key' : '430ed421bfe51579161a3f297e041b1b',
+                    'key' : '74660bd3e7d7604e3c18709b14ed6f51',
                     'format' : 'iframe',
-                    'height' : 50,
-                    'width' : 320,
-                    'params' : {}
-                  };
-                </script>
-                <script src="https://www.highperformanceformat.com/430ed421bfe51579161a3f297e041b1b/invoke.js"></script>
-              </body>
-            </html>
-          `}
-          className="w-[320px] h-[50px] border-none"
-          title="Ad Banner Top"
-        />
-      ) : (
-        <iframe
-          srcDoc={`
-            <!DOCTYPE html>
-            <html>
-              <head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:#000;}</style></head>
-              <body>
-                <script>
-                  var atOptions = {
-                    'key' : '4387492b60c39bf8e9b394dd040c5e83',
-                    'format' : 'iframe',
-                    'height' : 60,
+                    'height' : 250,
                     'width' : 300,
                     'params' : {}
                   };
                 </script>
-                <script src="https://www.highperformanceformat.com/4387492b60c39bf8e9b394dd040c5e83/invoke.js"></script>
+                <script src="https://www.highrevenueformat.com/74660bd3e7d7604e3c18709b14ed6f51/invoke.js"></script>
               </body>
             </html>
           `}
-          className="w-[300px] h-[60px] border-none"
+          className="w-[300px] h-[250px] border-none"
+          title="Ad Banner Top"
+        />
+      ) : (
+        /* Bottom Banner Invoke Unit */
+        <iframe
+          srcDoc={`
+            <!DOCTYPE html>
+            <html>
+              <head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:#000;}</style></head>
+              <body>
+                <script async="async" data-cfasync="false" src="https://pl30970520.profitableratecpmnetwork.com/21559d7c813f7ddaf82b5781951a37ac/invoke.js"></script>
+                <div id="container-21559d7c813f7ddaf82b5781951a37ac"></div>
+              </body>
+            </html>
+          `}
+          className="w-[320px] h-[60px] border-none"
           title="Ad Banner Bottom"
         />
       )}
