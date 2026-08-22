@@ -33,8 +33,8 @@ const cleanApiKey = (key: string | undefined) => {
   return k;
 };
 
-import { MODELS } from "./src/types";
-import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants";
+import { MODELS } from "./src/types.js";
+import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants.js";
 
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI {
