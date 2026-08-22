@@ -36,7 +36,7 @@ import "highlight.js/styles/github-dark.css";
 import { cn } from "../lib/utils";
 import { Message, MODELS, AIModel, ChatSession } from "../types";
 import { getChatResponse, generateImage, fetchAvailableModels } from "../services/aiService";
-import { useAuth, useSidebar, useUserSettings } from "../App";
+import { useAuth, useSidebar, useUserSettings, useModals } from "../App";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { db, signInWithGoogle, handleFirestoreError, OperationType } from "../firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
@@ -76,6 +76,8 @@ export default function Chat() {
     };
     loadModels();
   }, []);
+
+  const { openSettings } = useModals();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -258,11 +260,11 @@ export default function Chat() {
           handled = true;
           break;
         case '/about':
-          response = "### 🧠 About SteveAI\n\nSteveAI is a premium AI orchestrator designed to bridge multiple high-performance models into a single, seamless experience. Developed by **saadpie**, **Ahmed Aftab**, and **Shawaiz Ali**, it features real-time orchestration, vision capabilities, and multi-modal generation.";
+          response = "### 🧠 About SteveAI\n\nSteveAI is a premium AI orchestrator designed to bridge multiple high-performance models into a single, seamless experience. Developed by **Saadpie/Saad AbdulRehman** and **Aasmaan Rauf**, it features real-time orchestration, vision capabilities, and multi-modal generation.";
           handled = true;
           break;
         case '/contact':
-          response = "### 📬 Contact Us\n\nFor support or collaborations:\n- **Ahmed Aftab**: [GitHub](https://github.com/ahmedaftab)\n- **Saadpie**: [GitHub](https://github.com/saadpie)\n- **Shawaiz Ali**: [GitHub](https://github.com/shawaizali)";
+          response = "### 📬 Contact Us\n\nFor support or collaborations:\n- **Saadpie**: [GitHub](https://github.com/saadpie)\n- **Aasmaan Rauf**: [Profile](#)";
           handled = true;
           break;
         case '/model':
@@ -400,7 +402,13 @@ export default function Chat() {
         }
         
         // Send to service
-        responseContent = await getChatResponse(messagePayload, selectedModel, messages.slice(-10), settings?.customSystemInstruction);
+        responseContent = await getChatResponse(
+          messagePayload, 
+          selectedModel, 
+          messages.slice(-10), 
+          settings?.customSystemInstruction,
+          settings?.openrouterApiKey
+        );
       }
 
       // 3. Save assistant response to Firestore if logged in
@@ -433,18 +441,11 @@ export default function Chat() {
       }
 
     } catch (error: any) {
-      // Automatically disable model if it fails
-      setAvailableModels(prev => prev.map(m => m.id === selectedModel.id ? { ...m, status: 'error' } : m));
-      
       let displayError = error.message;
+      
       try {
         const parsed = JSON.parse(error.message);
         displayError = parsed.error || error.message;
-        
-        // Custom handling for the common 1MB limit error
-        if (displayError.includes("exceeds the maximum allowed size")) {
-          displayError = "The image or message is too large for the database limit (1MB). I've added automatic compression to fix this for your next message!";
-        }
       } catch (e) {
         // Not a JSON error, keep as is
       }
@@ -452,18 +453,11 @@ export default function Chat() {
       const errorMessage: Message = {
          id: (Date.now() + 1).toString(),
          role: "assistant",
-         content: `*System Note: The model ${selectedModel.name} encountered an error (${displayError}) and has been temporarily disabled. I am switching to another available model. Please send your message again.*`,
+         content: `🚨 **Literal Error from ${selectedModel.name}:**\n\n\`\`\`\n${displayError}\n\`\`\``,
          timestamp: Date.now(),
          userId: user?.uid || "guest"
       };
       setMessages(prev => [...prev, errorMessage]);
-      
-      // Update selected model to another working one
-      setAvailableModels(prev => {
-        const working = prev.filter(m => m.status === 'ok' && m.id !== selectedModel.id);
-        if (working.length > 0) setSelectedModel(working[0]);
-        return prev;
-      });
     } finally {
       setIsLoading(false);
     }
@@ -549,32 +543,45 @@ export default function Chat() {
                   className="absolute top-full left-0 mt-2 w-64 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-20"
                 >
                   <div className="max-h-[400px] overflow-y-auto scrollbar-hide py-2">
-                    {(availableModels.filter(m => m.type === 'text' && m.status === 'ok').length > 0
-                      ? availableModels.filter(m => m.type === 'text' && m.status === 'ok')
-                      : availableModels.filter(m => m.type === 'text')
-                    ).map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          setSelectedModel(model);
-                          setShowModelMenu(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-white/5 transition-colors",
-                          selectedModel.id === model.id ? "text-blue-500 bg-blue-500/5" : "text-gray-400"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-white/5",
-                          selectedModel.id === model.id ? "bg-blue-500/10" : "bg-white/5"
-                        )}>
-                          <Cpu className="w-4 h-4" />
+                    {Object.entries(
+                      (availableModels.filter(m => m.type === 'text' && m.status === 'ok').length > 0
+                        ? availableModels.filter(m => m.type === 'text' && m.status === 'ok')
+                        : availableModels.filter(m => m.type === 'text')
+                      ).reduce((acc: Record<string, AIModel[]>, model) => {
+                        if (!acc[model.provider]) acc[model.provider] = [];
+                        acc[model.provider].push(model);
+                        return acc;
+                      }, {})
+                    ).map(([provider, providerModels]) => (
+                      <div key={provider} className="mb-2">
+                        <div className="px-4 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-500/50 bg-blue-500/5 border-y border-white/5">
+                          {provider}
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold truncate text-xs">{model.name}</span>
-                          <span className="text-[10px] text-gray-500 uppercase tracking-widest">{model.provider}</span>
-                        </div>
-                      </button>
+                        {providerModels.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModel(model);
+                              setShowModelMenu(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-white/5 transition-colors",
+                              selectedModel.id === model.id ? "text-blue-500 bg-blue-500/5" : "text-gray-400"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-white/5",
+                              selectedModel.id === model.id ? "bg-blue-500/10" : "bg-white/5"
+                            )}>
+                              <Cpu className="w-4 h-4" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-bold truncate text-xs">{model.name}</span>
+                              <span className="text-[10px] text-gray-500 truncate">{model.id}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 </motion.div>
@@ -1104,7 +1111,7 @@ export default function Chat() {
           </button>
         </div>
         <p className="text-center text-[8px] sm:text-[10px] text-gray-600 mt-2 sm:mt-4 uppercase tracking-[0.2em] font-bold">
-          SteveAI Orchestrator v4.0 • Powered by Saadpie & Ahmed
+          SteveAI Orchestrator v4.0 • Powered by Saadpie & Aasmaan Rauf
         </p>
       </div>
     </div>

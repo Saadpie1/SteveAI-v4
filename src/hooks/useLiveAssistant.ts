@@ -124,9 +124,17 @@ export function useLiveAssistant() {
 
         // Handle structural bridge messages
         if (message.type === 'error') {
-           setError(message.message);
+           setError(message.message || "A critical neural link error occurred.");
            disconnect();
            return;
+        }
+
+        if (message.type === 'close') {
+          if (message.reason) {
+            setError(`Link Severed: ${message.reason}`);
+          }
+          disconnect();
+          return;
         }
 
         // Handle Interruption

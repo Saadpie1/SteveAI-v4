@@ -1,6 +1,6 @@
 {
   "name": "SteveAI Orchestrator",
-  "description": "Ultimate Multi-Modal AI Assistant and Orchestration Layer by Saadpie, Shawaiz, and Ahmed.",
+  "description": "Ultimate Multi-Modal AI Assistant and Orchestration Layer by Saadpie/Saad AbdulRehman and Aasmaan Rauf.",
   "requestFramePermissions": ["microphone", "camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

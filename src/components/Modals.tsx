@@ -149,9 +149,31 @@ export function SettingsModal({ isOpen, onClose }: ModalProps) {
                     </div>
                   </div>
 
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                      <Zap className="w-3.5 h-3.5 text-orange-500" />
+                      API Keys (Optional)
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-gray-400 ml-1">OpenRouter API Key</label>
+                      </div>
+                      <input
+                        type="password"
+                        value={settings.openrouterApiKey || ""}
+                        onChange={(e) => setSettings({ ...settings, openrouterApiKey: e.target.value })}
+                        placeholder="sk-or-v1-..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/50 transition-all"
+                      />
+                      <p className="text-[10px] text-gray-500 italic ml-1">
+                        Required only if the server key is missing or for personal rate limits.
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
                     <p className="text-[10px] text-blue-400/80 leading-relaxed">
-                      Default: "You are SteveAI, a highly advanced orchestrator made by saadpie, Ahmed Aftab, and Shawaiz Ali."
+                      Default: "You are SteveAI, a highly advanced orchestrator made by Saadpie/Saad AbdulRehman and Aasmaan Rauf."
                     </p>
                   </div>
                 </>

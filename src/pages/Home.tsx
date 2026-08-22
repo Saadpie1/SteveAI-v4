@@ -267,7 +267,7 @@ export default function Home() {
       {/* Architects & Founders */}
       <section className="max-w-7xl mx-auto px-4 mt-40 text-center pb-20">
         <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] mb-16">The Architects of Intelligence</h2>
-        <div className="grid sm:grid-cols-3 gap-12 sm:gap-20 max-w-5xl mx-auto">
+        <div className="grid sm:grid-cols-2 gap-12 sm:gap-20 max-w-3xl mx-auto">
           {[
             { 
                 name: "Saad Pie", 
@@ -275,8 +275,11 @@ export default function Home() {
                 bio: "Architect of the SteveAI model routing engine and core mirror system.",
                 img: "https://lh3.googleusercontent.com/a/ACg8ocII0Dt3UD1gvZN4bvb1J6iTfqWErDWaZrCXduaQOym1d5O1nCwn=s96-c"
             },
-            { name: "Ahmed Aftab", role: "Spatial Lead", bio: "Directing development of the 3D generation and spatial intelligence engines." },
-            { name: "Shawaiz Ali", role: "Infrastructure Strategist", bio: "Leading the global scale and high-availability mirror deployments." },
+            { 
+                name: "Aasmaan Rauf", 
+                role: "Lead Researcher", 
+                bio: "Directing the evolution of spatial neural networks and high-compute mirror deployments." 
+            },
           ].map((person) => (
             <div key={person.name} className="group">
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-zinc-900 border border-white/10 p-0.5 mx-auto mb-6 transform group-hover:rotate-6 transition-all duration-500 shadow-2xl relative">

@@ -113,7 +113,7 @@ export default function About() {
         {/* Team Section */}
         <div className="border-y border-white/10 py-20 sm:py-32 mb-20">
           <h2 className="text-center text-xs font-black text-gray-500 uppercase tracking-[0.5em] mb-16 sm:mb-20">The Architect Collective</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 sm:gap-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-16 max-w-3xl mx-auto">
             {[
               { 
                 name: "Saad Pie", 
@@ -121,8 +121,11 @@ export default function About() {
                 bio: "Inventor of the sovereign model routing layer and the 4.0 orchestrator core.",
                 img: "https://lh3.googleusercontent.com/a/ACg8ocII0Dt3UD1gvZN4bvb1J6iTfqWErDWaZrCXduaQOym1d5O1nCwn=s96-c"
               },
-              { name: "Shawaiz Ali", role: "Cloud Strategist", bio: "Leading the scaling operations for our high-compute global mirror network." },
-              { name: "Ahmed Aftab", role: "Spatial Designer", bio: "Directing the evolution of 3D synthesis and spatial neural networks." },
+              { 
+                name: "Aasmaan Rauf", 
+                role: "Lead Researcher", 
+                bio: "Directing the evolution of spatial neural networks and high-compute mirror deployments." 
+              },
             ].map((member) => (
               <div key={member.name} className="flex flex-col items-center text-center group">
                 <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[2rem] sm:rounded-[2.5rem] bg-zinc-900 border border-white/10 p-1 mb-6 sm:mb-8 transform group-hover:-rotate-3 transition-all duration-500 shadow-2xl relative">

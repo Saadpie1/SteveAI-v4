@@ -19,7 +19,7 @@ export interface ChatSession {
 export interface AIModel {
   id: string;
   name: string;
-  provider: 'groq' | 'pollinations' | 'cloudflare' | 'g4f' | 'siliconflow' | 'huggingface' | 'together' | 'mistral' | 'gemini' | 'sambanova' | 'cohere';
+  provider: 'groq' | 'pollinations' | 'cloudflare' | 'g4f' | 'siliconflow' | 'huggingface' | 'together' | 'mistral' | 'gemini' | 'sambanova' | 'cohere' | 'antigravity' | 'openrouter';
   type: 'text' | 'image' | 'video' | '3d';
   mirrors?: string[]; // Direct .hf.space URLs
   status?: 'ok' | 'error';
@@ -37,6 +37,7 @@ export interface UserSettings {
   location?: string;
   role?: string;
   customSystemInstruction?: string;
+  openrouterApiKey?: string;
   credits?: {
     groq?: number;
     pollinations?: number;
@@ -77,11 +78,13 @@ export const MODELS: AIModel[] = [
   { id: 'command-r-plus-08-2024', name: 'Command R+ (Cohere)', provider: 'cohere', type: 'text' },
 
   // Gemini Models (Free tier via Google Gen AI!)
-  { id: 'gemini-1.5-flash-latest', name: 'Gemini 1.5 Flash', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-2.5-flash-native-audio-latest', name: 'SteveAI Neural Hub', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-2.5-flash', name: 'SteveAI Neural Hub', provider: 'gemini', type: 'text', vision: true },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini', type: 'text', vision: true },
   { id: 'gemini-2.0-flash-lite-preview-02-05', name: 'Gemini 2.0 Flash Lite', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
   { id: 'gemini-1.5-pro-latest-image', name: 'Gemini 1.5 Pro Vision', provider: 'gemini', type: 'image' },
   
   // Groq Models
@@ -93,7 +96,30 @@ export const MODELS: AIModel[] = [
   { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B (Groq)', provider: 'groq', type: 'text' },
 
   // Pollinations Text Models
+  { id: 'qwen-coder', name: 'Qwen Coder (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'nova-fast', name: 'Nova Fast (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'gpt-oss', name: 'GPT OSS (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'openai', name: 'OpenAI (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'command-a-plus', name: 'Command A+ (Pollinations)', provider: 'pollinations', type: 'text' },
   { id: 'openai-fast', name: 'OpenAI Fast (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'gpt-5.4-mini', name: 'GPT 5.4 Mini (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'midijourney', name: 'Midijourney (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'llama', name: 'Llama (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'muse-glimmer', name: 'Muse Glimmer (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'grok', name: 'Grok (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'nemotron-3.5-lightning', name: 'Nemotron 3.5 Lightning (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'mistral-large', name: 'Mistral Large (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'deepseek', name: 'DeepSeek (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'minimax-m2.7', name: 'Minimax M2.7 (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'minimax', name: 'Minimax (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'gpt-5.6-luna', name: 'GPT 5.6 Luna (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'nova', name: 'Nova (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'grok-large', name: 'Grok Large (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'perplexity-fast', name: 'Perplexity Fast (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'deepseek-pro', name: 'DeepSeek Pro (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'midijourney-large', name: 'Midijourney Large (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'gpt-5.6-terra', name: 'GPT 5.6 Terra (Pollinations)', provider: 'pollinations', type: 'text' },
+  { id: 'kimi', name: 'Kimi (Pollinations)', provider: 'pollinations', type: 'text' },
 
   // Together AI Models
   { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B (Together)', provider: 'together', type: 'text' },
@@ -276,13 +302,23 @@ export const MODELS: AIModel[] = [
   },
   
   // 3D Generation Models
-  {
-    id: 'stable-fast-3d',
-    name: 'Stable Fast 3D',
-    provider: 'huggingface',
-    type: '3d',
-    mirrors: [
-      'pheerakarn-triposr.hf.space'
-    ]
-  }
+  { id: 'stable-fast-3d', name: 'Stable Fast 3D', provider: 'huggingface', type: '3d', mirrors: ['pheerakarn-triposr.hf.space'] },
+  
+  // OpenRouter Free Models
+  { id: 'stealth/ox-alpha', name: 'Ox Alpha (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'dots-studio/dots-3-note-preview:free', name: 'Dots 3 Note (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'liquid/lfm-2.5-2.6b:free', name: 'LFM 2.5 2.6B (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'thinkingmachines/inkling:free', name: 'Inkling (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'cohere/north-mini-code:free', name: 'North Mini Code (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'nvidia/nemotron-3.5-content-safety:free', name: 'Nemotron 3.5 Safety (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron 3 Nano Reasoning (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B IT (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT (OpenRouter)', provider: 'openrouter', type: 'text' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B (OpenRouter)', provider: 'openrouter', type: 'text' }
 ];

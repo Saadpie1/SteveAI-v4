@@ -72,7 +72,13 @@ export async function getVideoStatus(requestId: string): Promise<{ status: strin
   };
 }
 
-export async function getChatResponse(message: any, model: AIModel, history: Message[] = [], systemInstruction?: string): Promise<string> {
+export async function getChatResponse(
+  message: any, 
+  model: AIModel, 
+  history: Message[] = [], 
+  systemInstruction?: string,
+  openrouterApiKey?: string
+): Promise<string> {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -81,7 +87,8 @@ export async function getChatResponse(message: any, model: AIModel, history: Mes
       modelId: model.id,
       message: message,
       history: history.map(m => ({ role: m.role, content: m.content })),
-      systemInstruction: systemInstruction
+      systemInstruction: systemInstruction,
+      openrouterApiKey: openrouterApiKey
     })
   });
 

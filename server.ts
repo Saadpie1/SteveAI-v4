@@ -10,10 +10,31 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Handle ESM/CJS compatibility for path resolution
+const _filename = typeof import.meta !== 'undefined' && import.meta.url 
+  ? fileURLToPath(import.meta.url) 
+  : (typeof __filename !== 'undefined' ? __filename : '');
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
+
+const cleanApiKey = (key: string | undefined) => {
+  if (!key) return "";
+  // Step 1: Trim whitespace
+  let k = key.trim();
+  // Step 2: Handle cases where the user might have pasted a whole command or multiple assignments
+  // e.g. API_KEY="sk-or-v1-..."API_KEY="sk-or-v1-..."
+  if (k.includes('API_KEY=')) {
+    const parts = k.split('API_KEY=');
+    k = parts[parts.length - 1].trim();
+  }
+  // Step 3: Remove leading "Bearer "
+  k = k.replace(/^(Bearer\s+)/i, '');
+  // Step 4: Remove surrounding quotes (including multiple nested quotes)
+  k = k.replace(/^["']+|["']+$/g, '');
+  return k;
+};
 
 import { MODELS } from "./src/types.ts";
+import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants.ts";
 
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI {
@@ -59,67 +80,84 @@ const CONFIG = {
   },
   cohere: {
     apiKey: process.env.COHERE_API_KEY || ""
+  },
+  antigravity: {
+    apiUrl: process.env.EXTERNAL_GEMINI_API_URL || "https://antigravity-seven-delta.vercel.app/api/chat"
+  },
+  openrouter: {
+    apiKey: "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"
   }
 };
 
 let modelStatusCache: Record<string, string> = {};
 let lastCheckTime = 0;
 
-async function refreshModelStatus() {
-  if (Date.now() - lastCheckTime < 1000 * 60 * 5) return; // 5 mins cache
+async function refreshModelStatus(force = false) {
+  if (!force && Date.now() - lastCheckTime < 1000 * 60 * 5) return; // 5 mins cache
   lastCheckTime = Date.now();
-  
+    
   try {
-    const fetchWithTimeout = async (url: string, options: any = {}, timeout = 5000) => {
+    const checkProvider = async (url: string, options: any = {}) => {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
+      const id = setTimeout(() => controller.abort(), 5000);
       try {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(id);
-        return await response.json();
+        const data = await response.json().catch(() => ({}));
+        return { ok: response.ok, data };
       } catch (e) {
         clearTimeout(id);
-        throw e;
+        return { ok: false, data: null };
       }
     };
 
-    const [groqRes, pollRes, cfRes, g4fRes] = await Promise.allSettled([
-      CONFIG.groq.apiKey ? fetchWithTimeout("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${CONFIG.groq.apiKey}` } }) : Promise.reject("No Groq Key"),
-      fetchWithTimeout("https://text.pollinations.ai/models"),
-      CONFIG.cf.token ? fetchWithTimeout(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.cf.accountId}/ai/models/search`, { headers: { Authorization: `Bearer ${CONFIG.cf.token}` } }) : Promise.reject("No CF Token"),
-      fetchWithTimeout("https://api.g4f.ai/v1/models").catch(() => ({})) // Silent fallback for G4F
+    const [groqRes, pollRes, cfRes, g4fRes, sambaRes, togetherRes, mistralRes, openRouterRes] = await Promise.all([
+      CONFIG.groq.apiKey ? checkProvider("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${CONFIG.groq.apiKey}` } }) : Promise.resolve({ ok: false, data: null }),
+      checkProvider("https://gen.pollinations.ai/models", {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://pollinations.ai/',
+          'Origin': 'https://pollinations.ai'
+        }
+      }),
+      CONFIG.cf.token ? checkProvider(`https://api.cloudflare.com/client/v4/accounts/${CONFIG.cf.accountId}/ai/models/search`, { headers: { Authorization: `Bearer ${CONFIG.cf.token}` } }) : Promise.resolve({ ok: false, data: null }),
+      checkProvider("https://api.g4f.ai/v1/models"),
+      CONFIG.sambanova.apiKey ? checkProvider("https://api.sambanova.ai/v1/models", { headers: { Authorization: `Bearer ${CONFIG.sambanova.apiKey}` } }) : Promise.resolve({ ok: false, data: null }),
+      CONFIG.together.apiKey ? checkProvider("https://api.together.xyz/v1/models", { headers: { Authorization: `Bearer ${CONFIG.together.apiKey}` } }) : Promise.resolve({ ok: false, data: null }),
+      CONFIG.mistral.apiKey ? checkProvider("https://api.mistral.ai/v1/models", { headers: { Authorization: `Bearer ${CONFIG.mistral.apiKey}` } }) : Promise.resolve({ ok: false, data: null }),
+      CONFIG.openrouter.apiKey ? checkProvider("https://openrouter.ai/api/v1/models", { headers: { Authorization: `Bearer ${CONFIG.openrouter.apiKey}` } }) : Promise.resolve({ ok: false, data: null })
     ]);
 
     const groqModels = new Set();
     const pollModels = new Set();
-    let cfOk = false;
-    let g4fOk = false;
-
-    if (groqRes.status === 'fulfilled' && groqRes.value?.data) {
-      groqRes.value.data.forEach((m: any) => groqModels.add(m.id));
+    
+    if (groqRes.ok && Array.isArray(groqRes.data?.data)) {
+      groqRes.data.data.forEach((m: any) => groqModels.add(m.id));
     }
-    if (pollRes.status === 'fulfilled' && Array.isArray(pollRes.value)) {
-      pollRes.value.forEach((m: any) => pollModels.add(m.name || m.id));
-    }
-    if (cfRes && cfRes.status === 'fulfilled' && cfRes.value?.success === true) {
-      cfOk = true;
-    }
-    if (g4fRes && g4fRes.status === 'fulfilled') {
-      g4fOk = true;
+    if (pollRes.ok && Array.isArray(pollRes.data)) {
+      pollRes.data.forEach((m: any) => pollModels.add(m.name || m.id));
     }
 
     const newStatus: Record<string, string> = {};
     for (const m of MODELS) {
       if (m.provider === 'groq') {
-        // If the request completely failed or returned an API error (not an array of models), assume it's OK temporarily.
-        const hasData = groqRes.status === 'fulfilled' && Array.isArray(groqRes.value?.data);
-        newStatus[m.id] = (!hasData || groqModels.has(m.id)) ? 'ok' : 'error';
+        newStatus[m.id] = (groqRes.ok && groqModels.has(m.id)) ? 'ok' : 'error';
       } else if (m.provider === 'pollinations' && m.type === 'text') {
-        newStatus[m.id] = (pollModels.has(m.id) || pollRes.status === 'fulfilled') ? 'ok' : 'error';
+        newStatus[m.id] = pollRes.ok ? 'ok' : 'error';
       } else if (m.provider === 'cloudflare') {
-        newStatus[m.id] = cfOk ? 'ok' : 'error';
+        newStatus[m.id] = (cfRes.ok && cfRes.data?.success) ? 'ok' : 'error';
       } else if (m.provider === 'g4f') {
-        newStatus[m.id] = g4fOk ? 'ok' : 'error';
+        newStatus[m.id] = g4fRes.ok ? 'ok' : 'error';
+      } else if (m.provider === 'sambanova') {
+        newStatus[m.id] = sambaRes.ok ? 'ok' : 'error';
+      } else if (m.provider === 'together') {
+        newStatus[m.id] = togetherRes.ok ? 'ok' : 'error';
+      } else if (m.provider === 'mistral') {
+        newStatus[m.id] = mistralRes.ok ? 'ok' : 'error';
+      } else if (m.provider === 'antigravity') {
+        newStatus[m.id] = 'ok';
+      } else if (m.provider === 'openrouter') {
+        newStatus[m.id] = openRouterRes.ok ? 'ok' : 'error';
       } else {
         newStatus[m.id] = 'ok';
       }
@@ -133,11 +171,10 @@ async function refreshModelStatus() {
 // Ensure first run occurs async so we don't block
 refreshModelStatus();
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+export const app = express();
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(cors());
+app.use(cors());
   
   // Fix for serverless environments (like Vercel) where req.body is already parsed
   app.use((req, res, next) => {
@@ -154,6 +191,7 @@ async function startServer() {
   });
 
   app.get("/api/models/status", async (req, res) => {
+    await refreshModelStatus(true);
     refreshModelStatus(); // trigger background refresh if needed
     res.json(modelStatusCache);
   });
@@ -476,7 +514,7 @@ You have god-level access to:
     const { provider, modelId, message, history, systemInstruction } = req.body;
 
     try {
-      const baseSystem = `You are SteveAI, a highly advanced AI orchestrator made by saadpie, Ahmed Aftab, and Shawaiz Ali. You are helpful, creative, and technically precise. 
+      const baseSystem = `You are SteveAI, a highly advanced AI orchestrator made by Saadpie/Saad AbdulRehman and Aasmaan Rauf. You are helpful, creative, and technically precise. 
 You have the ability to generate images directly in the chat and even execute code in a built-in sandboxed environment.
 To generate an image, output: ![Image description](/api/image?prompt=detailed%20visual%20description%20encoded%20for%20url&modelId=flux)
 When you write code (JavaScript, TypeScript, Python, or Bash), you should encourage the user to test it by clicking the "Run" button.
@@ -562,19 +600,25 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
           { role: "user", content: message }
         ];
 
-        const response = await fetch("https://text.pollinations.ai/openai/chat/completions", {
+        const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://pollinations.ai/',
+            'Origin': 'https://pollinations.ai',
+            ...(CONFIG.pollinations.apiKey ? { 'Authorization': `Bearer ${CONFIG.pollinations.apiKey}` } : {})
           },
           body: JSON.stringify({
-            model: modelId,
-            messages: messages
+            model: modelId || 'openai',
+            messages: messages,
+            seed: Math.floor(Math.random() * 1000000)
           })
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error?.message || `Pollinations API Error: ${response.status}`);
+          const errorMsg = data.details?.error?.message || data.error?.message || data.error || data.message || `Pollinations API Error: ${response.status}`;
+          throw new Error(errorMsg);
         }
         const content = data.choices?.[0]?.message?.content;
         if (!content) throw new Error("No response from Pollinations");
@@ -704,26 +748,43 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
           { role: "user", content: message }
         ];
 
-        const response = await fetch("https://api.sambanova.ai/v1/chat/completions", {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${CONFIG.sambanova.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: modelId,
-            messages: messages
-          })
-        });
-        const textBody = await response.text();
+        let retries = 3;
+        let response: Response | undefined;
+        let textBody = "";
+
+        while (retries > 0) {
+          response = await fetch("https://api.sambanova.ai/v1/chat/completions", {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${CONFIG.sambanova.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: modelId,
+              messages: messages
+            })
+          });
+          textBody = await response.text();
+          
+          if (response.status === 429) {
+            retries--;
+            if (retries > 0) {
+              console.log(`SambaNova rate limit hit. Retrying in 3 seconds... (${retries} retries left)`);
+              await new Promise(r => setTimeout(r, 3000));
+              continue;
+            }
+          }
+          break;
+        }
+
         let data;
         try {
           data = JSON.parse(textBody);
         } catch (e) {
           throw new Error(`SambaNova Error (Non-JSON): ${textBody.slice(0, 100)}...`);
         }
-        if (!response.ok) {
-           throw new Error(data.error?.message || data.message || `SambaNova API Error: ${response.status}`);
+        if (!response?.ok) {
+           throw new Error(data.error?.message || data.message || `SambaNova API Error: ${response?.status}`);
         }
         const content = data.choices?.[0]?.message?.content;
         if (!content) throw new Error("No response from SambaNova");
@@ -781,11 +842,85 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
         }
       }
 
+      if (provider === 'antigravity') {
+        const messages = [
+          { role: "system", content: finalSystem },
+          ...(Array.isArray(history) ? history.map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content })) : []),
+          { role: "user", content: message }
+        ];
+
+        const response = await fetch(CONFIG.antigravity.apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelId,
+            messages: messages,
+            stream: false
+          })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || data.message || `Antigravity API Error: ${response.status}`);
+        }
+        
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) throw new Error("No response from Antigravity");
+        return res.json({ content });
+      }
+
+      if (provider === 'openrouter') {
+        const userApiKey = req.body.openrouterApiKey;
+        // Support both naming conventions just in case
+        const rawApiKey = userApiKey || CONFIG.openrouter.apiKey || process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API;
+
+        if (!rawApiKey) {
+          throw new Error("OpenRouter API key is missing. Please set OPENROUTER_API_KEY in Settings.");
+        }
+
+        const cleanKey = cleanApiKey(rawApiKey);
+
+        const { OpenAI } = await import("openai");
+        const openai = new OpenAI({
+          apiKey: cleanKey,
+          baseURL: "https://openrouter.ai/api/v1",
+          defaultHeaders: {
+            "HTTP-Referer": "https://steveai.studio",
+            "X-Title": "SteveAI",
+          }
+        });
+
+        const messages = [
+          { role: "system", content: finalSystem },
+          ...(Array.isArray(history) ? history.map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content })) : []),
+          { role: "user", content: message }
+        ];
+
+        const keySource = userApiKey ? "User Settings" : (process.env.OPENROUTER_API_KEY ? "Server Env (KEY)" : "Server Env (API)");
+        console.log(`[OpenRouter SDK] Requesting model: ${modelId} using key from ${keySource}`);
+
+        try {
+          const completion = await openai.chat.completions.create({
+            model: modelId,
+            messages: messages as any,
+          });
+
+          const content = completion.choices?.[0]?.message?.content;
+          if (!content) throw new Error("No response from OpenRouter");
+          return res.json({ content });
+        } catch (err: any) {
+          console.error("[OpenRouter SDK] Error:", err);
+          
+          const openRouterError = err.response?.data?.error?.message || err.message;
+          throw new Error(openRouterError);
+        }
+      }
+
       res.status(400).json({ error: "Invalid provider" });
     } catch (error: any) {
-      if (!error.message.includes("User not found") && !error.message.includes("No response")) {
-         console.error(`Chat Error (${provider}):`, error.message);
-      }
+      console.error(`Chat Error (${provider}):`, error.message);
       res.status(500).json({ error: error.message || "Internal Server Error" });
     }
   });
@@ -924,7 +1059,14 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
       res.send(Buffer.from(buffer));
     } catch (error: any) {
       console.error("Image Gen Error:", error);
-      res.status(500).json({ error: error.message || "Internal Server Error" });
+      const svgError = `<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#fee2e2" />
+  <text x="50%" y="50%" font-family="sans-serif" font-size="24" fill="#991b1b" text-anchor="middle" dominant-baseline="middle">
+    ${error.message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+  </text>
+</svg>`;
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.send(svgError);
     }
   });
 
@@ -1051,6 +1193,7 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
     }
   });
 
+async function startServer() {
   // Create HTTP server to handle both Express and WebSockets
   const httpServer = createHttpServer(app);
 
@@ -1063,38 +1206,46 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
 
     try {
       const ai = getGeminiClient();
+      const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+      
+      if (!apiKey) {
+        throw new Error("Neural Link Error: GEMINI_API_KEY is missing or invalid in server environment.");
+      }
+
       session = await ai.live.connect({
         model: "gemini-3.1-flash-live-preview",
         callbacks: {
           onopen: () => {
-             console.log("Gemini Live session opened.");
+             console.log("Gemini Live session opened successfully.");
              clientWs.send(JSON.stringify({ type: 'open' }));
           },
           onmessage: (message: any) => {
-            // Forward everything from Gemini to client
             clientWs.send(JSON.stringify(message));
           },
-          onclose: () => {
-            console.log("Gemini Live session closed.");
-            clientWs.send(JSON.stringify({ type: 'close' }));
+          onclose: (event: any) => {
+            console.log("Gemini Live session closed by server. Event reason:", event?.reason || "No reason provided");
+            const reason = event?.reason || "Neural Link was severed by the remote host.";
+            clientWs.send(JSON.stringify({ type: 'close', reason }));
             clientWs.close();
           },
           onerror: (err: any) => {
-            console.error("Gemini Live Bridge Error:", err);
-            clientWs.send(JSON.stringify({ type: 'error', message: err.message }));
+            const errorMessage = err.message || (err.error ? err.error.message : null) || JSON.stringify(err) || "Unknown internal error";
+            console.error("Gemini Live Bridge Internal Error:", errorMessage);
+            clientWs.send(JSON.stringify({ 
+              type: 'error', 
+              message: `Neural Link Synchronization Failure: ${errorMessage}` 
+            }));
           }
         },
         config: {
-          generationConfig: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
-            },
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
           },
           systemInstruction: {
-            parts: [{ text: "You are SteveAI, the world's most advanced autonomous engine. You speak concisely and with absolute authority." }]
+            parts: [{ text: STEVE_SYSTEM_INSTRUCTION }]
           },
-          tools: [{ googleSearch: {} }],
+          // tools: [{ googleSearch: {} }],
         }
       });
 
@@ -1132,7 +1283,10 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    // Provide a fallback for SPA routing
+    app.get('*', (req, res, next) => {
+      // Don't intercept API routes
+      if (req.path.startsWith('/api/')) return next();
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
@@ -1142,4 +1296,9 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
   });
 }
 
-startServer();
+// Only start the server if not running in a Vercel serverless environment
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
