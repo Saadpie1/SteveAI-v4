@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "npm run clean && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "npm run clean && vite build && esbuild server.ts --bundle --platform=node --format=cjs --sourcemap --outfile=dist/server.cjs --external:express --external:ws --external:dotenv --external:@google/genai --external:@google/generative-ai --external:openai --external:firebase"
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
