@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { WebSocketServer } from "ws";
@@ -11,10 +10,7 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 dotenv.config();
 
 // Handle ESM/CJS compatibility for path resolution
-const _filename = typeof import.meta !== 'undefined' && import.meta.url 
-  ? fileURLToPath(import.meta.url) 
-  : (typeof __filename !== 'undefined' ? __filename : '');
-const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.resolve();
 
 const cleanApiKey = (key: string | undefined) => {
   if (!key) return "";
@@ -33,13 +29,17 @@ const cleanApiKey = (key: string | undefined) => {
   return k;
 };
 
-import { MODELS } from "./src/types.js";
-import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants.js";
+import { MODELS } from "./src/types";
+import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants";
 
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI {
   if (!aiClient) {
-    const key = (process.env.GEMINI_API_KEY || "").trim();
+    let key = cleanApiKey(process.env.GEMINI_API_KEY);
+    // If EXTERNAL_GEMINI_API_URL or ANTIGRAVITY_API_KEY was provided as an API key (e.g. starts with AIzaSy...), use as fallback
+    if (!key && process.env.EXTERNAL_GEMINI_API_URL && !process.env.EXTERNAL_GEMINI_API_URL.startsWith("http")) {
+      key = cleanApiKey(process.env.EXTERNAL_GEMINI_API_URL);
+    }
     aiClient = new GoogleGenAI({ 
       apiKey: key,
       httpOptions: {
@@ -51,6 +51,15 @@ function getGeminiClient(): GoogleGenAI {
   }
   return aiClient;
 }
+
+const safeUrl = (url: string | undefined, defaultUrl: string): string => {
+  if (!url) return defaultUrl;
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return defaultUrl;
+};
 
 const CONFIG = {
   cf: {
@@ -82,7 +91,7 @@ const CONFIG = {
     apiKey: process.env.COHERE_API_KEY || ""
   },
   antigravity: {
-    apiUrl: process.env.EXTERNAL_GEMINI_API_URL || "https://antigravity-seven-delta.vercel.app/api/chat"
+    apiUrl: safeUrl(process.env.EXTERNAL_GEMINI_API_URL, "https://antigravity-seven-delta.vercel.app/api/chat")
   },
   openrouter: {
     apiKey: "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"
@@ -544,8 +553,18 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
           }
           
           const ai = getGeminiClient();
+          let effectiveModel = modelId || "gemini-3.6-flash";
+          if (
+            effectiveModel === "gemini-1.5-flash" ||
+            effectiveModel === "gemini-1.5-pro" ||
+            effectiveModel === "gemini-2.0-flash" ||
+            effectiveModel === "gemini-2.5-flash" ||
+            effectiveModel === "gemini-2.0-flash-lite-preview-02-05"
+          ) {
+            effectiveModel = "gemini-3.6-flash";
+          }
           const result = await ai.models.generateContent({ 
-             model: modelId || "gemini-1.5-flash",
+             model: effectiveModel,
              contents,
              config: {
                systemInstruction: finalSystem
@@ -849,26 +868,76 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
           { role: "user", content: message }
         ];
 
-        const response = await fetch(CONFIG.antigravity.apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: modelId,
-            messages: messages,
-            stream: false
-          })
-        });
-        
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error?.message || data.message || `Antigravity API Error: ${response.status}`);
+        let targetUrl = "https://antigravity-seven-delta.vercel.app/api/chat";
+        const customUrl = process.env.EXTERNAL_GEMINI_API_URL || process.env.ANTIGRAVITY_API_URL;
+        if (customUrl && (customUrl.startsWith("http://") || customUrl.startsWith("https://"))) {
+          targetUrl = customUrl.trim();
         }
-        
-        const content = data.choices?.[0]?.message?.content;
-        if (!content) throw new Error("No response from Antigravity");
-        return res.json({ content });
+
+        const effectiveModel = (modelId || "gemini-3.5-flash-lite").replace(/-antigravity$/, "");
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+          const response = await fetch(targetUrl, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: effectiveModel,
+              messages: messages,
+              stream: false
+            })
+          });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json().catch(() => ({}));
+            const content = data.choices?.[0]?.message?.content || data.content || (typeof data === 'string' ? data : null);
+            if (content) {
+              return res.json({ content });
+            }
+          }
+          console.warn(`Antigravity external endpoint (${targetUrl}) returned status ${response.status}. Falling back to native Gemini...`);
+        } catch (fetchErr: any) {
+          console.warn(`Antigravity endpoint fetch error:`, fetchErr.message, `- Falling back to native Gemini...`);
+        }
+
+        // Fallback to Google Gemini
+        try {
+          const contents: any[] = [];
+          if (Array.isArray(history)) {
+            history.forEach((h: any) => {
+              contents.push({
+                role: h.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: h.content }]
+              });
+            });
+          }
+          if (Array.isArray(message)) {
+            contents.push({ role: 'user', parts: message });
+          } else {
+            contents.push({ role: 'user', parts: [{ text: message }] });
+          }
+
+          const ai = getGeminiClient();
+          const result = await ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents,
+            config: {
+              systemInstruction: finalSystem
+            }
+          });
+          const content = result.text;
+          if (!content) throw new Error("No response from Gemini fallback");
+          return res.json({ content });
+        } catch (geminiErr: any) {
+          console.error("Gemini fallback error for antigravity:", geminiErr);
+          throw new Error(geminiErr.message || "Failed to generate response");
+        }
       }
 
       if (provider === 'openrouter') {
@@ -1193,6 +1262,15 @@ If the output of a calculation or logic is critical, you can say: "Click Run to 
     }
   });
 
+  // Fallback guard for /api/live in serverless environments
+  app.all("/api/live", (req, res) => {
+    res.status(200).json({
+      status: "live_websocket_bridge_active",
+      message: "The /api/live endpoint requires a WebSocket connection. In serverless environments (e.g. Vercel), WebSockets are stateless. For full real-time streaming, run in a persistent Node.js environment.",
+      ws_path: "/api/live"
+    });
+  });
+
 async function startServer() {
   // Create HTTP server to handle both Express and WebSockets
   const httpServer = createHttpServer(app);
@@ -1302,3 +1380,4 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
+

@@ -214,19 +214,8 @@ export default function Agent() {
         return payload;
       });
 
-      const response = await fetch("https://saadpie-openclaw-serverless.vercel.app/api/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: isIterative ? "" : (originalMessage || ""),
-          history: sanitizedHistory
-        })
-      });
-
-      // Elite Recovery Protocol: If external brain is offline, attempt local synchronization
       let data;
-      if (!response.ok) {
-        console.warn('External Brain unresponsive. Initiating Elite Local Recovery...');
+      try {
         const localResponse = await fetch("/api/agent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -236,13 +225,27 @@ export default function Agent() {
           })
         });
         
-        if (!localResponse.ok) {
-           const errorData = await localResponse.json().catch(() => ({}));
-           const errorMessage = errorData.error || localResponse.statusText;
-           throw new Error(`Neural Pulse Failure: ${errorMessage}`);
+        if (localResponse.ok) {
+          data = await localResponse.json();
+        } else {
+          throw new Error(`Local status ${localResponse.status}`);
         }
-        data = await localResponse.json();
-      } else {
+      } catch (localErr) {
+        console.warn('Local agent endpoint unavailable, attempting external brain fallback...', localErr);
+        const response = await fetch("https://saadpie-openclaw-serverless.vercel.app/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: isIterative ? "" : (originalMessage || ""),
+            history: sanitizedHistory
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || response.statusText;
+          throw new Error(`Neural Pulse Failure: ${errorMessage}`);
+        }
         data = await response.json();
       }
 

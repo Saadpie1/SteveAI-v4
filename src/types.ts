@@ -78,14 +78,14 @@ export const MODELS: AIModel[] = [
   { id: 'command-r-plus-08-2024', name: 'Command R+ (Cohere)', provider: 'cohere', type: 'text' },
 
   // Gemini Models (Free tier via Google Gen AI!)
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-2.5-flash', name: 'SteveAI Neural Hub', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-2.0-flash-lite-preview-02-05', name: 'Gemini 2.0 Flash Lite', provider: 'gemini', type: 'text', vision: true },
-  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
-  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
-  { id: 'gemini-1.5-pro-latest-image', name: 'Gemini 1.5 Pro Vision', provider: 'gemini', type: 'image' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.5-flash', name: 'SteveAI Neural Hub', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', provider: 'gemini', type: 'text', vision: true },
+  { id: 'gemini-3.5-flash-lite-antigravity', name: 'Gemini 3.5 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
+  { id: 'gemini-3.1-flash-lite-antigravity', name: 'Gemini 3.1 Flash Lite (Antigravity)', provider: 'antigravity', type: 'text' },
+  { id: 'gemini-3-pro-image-preview', name: 'Gemini 3 Pro Vision', provider: 'gemini', type: 'image' },
   
   // Groq Models
   { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile (Groq)', provider: 'groq', type: 'text' },

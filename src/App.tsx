@@ -23,69 +23,6 @@ import { doc, setDoc, getDoc, onSnapshot as onSnapshotDoc } from "firebase/fires
 import { UserSettings } from "./types";
 import { SettingsModal, CreditsModal, ActivityModal } from "./components/Modals";
 
-// ----------------------------------------------------------------------
-// AD BANNER COMPONENT (Active ONLY on Home, Docs, About)
-// ----------------------------------------------------------------------
-const ALLOWED_AD_PATHS = ["/", "/home", "/docs", "/about"];
-
-function AdBanner({ zone }: { zone: "top" | "bottom" }) {
-  const location = useLocation();
-  const shouldShowAd = ALLOWED_AD_PATHS.includes(location.pathname);
-
-  if (!shouldShowAd) return null;
-
-  return (
-    <div
-      className={cn(
-        "w-full flex justify-center items-center py-2 bg-black z-50 overflow-hidden shrink-0",
-        zone === "top" ? "border-b border-zinc-800" : "border-t border-zinc-800"
-      )}
-    >
-      {zone === "top" ? (
-        /* 300x250 Medium Banner Container */
-        <iframe
-          srcDoc={`
-            <!DOCTYPE html>
-            <html>
-              <head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:#000;}</style></head>
-              <body>
-                <script>
-                  var atOptions = {
-                    'key' : '74660bd3e7d7604e3c18709b14ed6f51',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                  };
-                </script>
-                <script src="https://www.highrevenueformat.com/74660bd3e7d7604e3c18709b14ed6f51/invoke.js"></script>
-              </body>
-            </html>
-          `}
-          className="w-[300px] h-[250px] border-none"
-          title="Ad Banner Top"
-        />
-      ) : (
-        /* Bottom Banner Invoke Unit */
-        <iframe
-          srcDoc={`
-            <!DOCTYPE html>
-            <html>
-              <head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:#000;}</style></head>
-              <body>
-                <script async="async" data-cfasync="false" src="https://pl30970520.profitableratecpmnetwork.com/21559d7c813f7ddaf82b5781951a37ac/invoke.js"></script>
-                <div id="container-21559d7c813f7ddaf82b5781951a37ac"></div>
-              </body>
-            </html>
-          `}
-          className="w-[320px] h-[60px] border-none"
-          title="Ad Banner Bottom"
-        />
-      )}
-    </div>
-  );
-}
-
 // Auth Context
 interface AuthContextType {
   user: User | null;
@@ -142,102 +79,95 @@ function AnimatedRoutes() {
   const isAgentPage = location.pathname === "/agent";
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
   const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage || isModelsPage || isLivePage || isAgentPage) && !isAuthPage;
+  const hideNavbar = isAuthPage;
 
   return (
-    <div className="flex min-h-screen bg-black flex-col">
-      {/* Top Banner (Only on Home, Docs, About) */}
-      <AdBanner zone="top" />
-
-      <div className="flex flex-1 w-full overflow-hidden">
-        {showSidebar && <Sidebar />}
-        <main className={cn(
-          "flex-1 transition-all duration-300 flex flex-col min-w-0",
-          (showSidebar && isOpen) ? "lg:ml-72" : "ml-0"
-        )}>
-          <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname.split('/')[1] || "home"}>
-              <Route path="/" element={
-                <PageWrapper>
-                  <Home />
-                </PageWrapper>
-              } />
-              <Route path="/chat" element={
-                <PageWrapper>
-                  <Chat />
-                </PageWrapper>
-              } />
-              <Route path="/chat/:sessionId" element={
-                <PageWrapper>
-                  <Chat />
-                </PageWrapper>
-              } />
-              <Route path="/image" element={
-                <PageWrapper>
-                  <ImageGen />
-                </PageWrapper>
-              } />
-              <Route path="/video" element={
-                <PageWrapper>
-                  <VideoGen />
-                </PageWrapper>
-              } />
-              <Route path="/3d" element={
-                <PageWrapper>
-                  <ThreeDGen />
-                </PageWrapper>
-              } />
-              <Route path="/models" element={
-                <PageWrapper>
-                  <Models />
-                </PageWrapper>
-              } />
-              <Route path="/live" element={
-                <PageWrapper>
-                  <Live />
-                </PageWrapper>
-              } />
-              <Route path="/profile" element={
-                <PageWrapper>
-                  <Profile />
-                </PageWrapper>
-              } />
-              <Route path="/docs" element={
-                <PageWrapper>
-                  <Docs />
-                </PageWrapper>
-              } />
-              <Route path="/about" element={
-                <PageWrapper>
-                  <About />
-                </PageWrapper>
-              } />
-              <Route path="/agent" element={
-                <PageWrapper>
-                  <Agent />
-                </PageWrapper>
-              } />
-              <Route path="/agent/:sessionId" element={
-                <PageWrapper>
-                  <Agent />
-                </PageWrapper>
-              } />
-              <Route path="/login" element={
-                <PageWrapper>
-                  <Login />
-                </PageWrapper>
-              } />
-              <Route path="/signup" element={
-                <PageWrapper>
-                  <Signup />
-                </PageWrapper>
-              } />
-            </Routes>
-          </AnimatePresence>
-        </main>
-      </div>
-
-      {/* Bottom Banner (Only on Home, Docs, About) */}
-      <AdBanner zone="bottom" />
+    <div className="flex min-h-screen bg-black">
+      {showSidebar && <Sidebar />}
+      <main className={cn(
+        "flex-1 transition-all duration-300",
+        (showSidebar && isOpen) ? "lg:ml-72" : "ml-0"
+      )}>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname.split('/')[1] || "home"}>
+            <Route path="/" element={
+              <PageWrapper>
+                <Home />
+              </PageWrapper>
+            } />
+            <Route path="/chat" element={
+              <PageWrapper>
+                <Chat />
+              </PageWrapper>
+            } />
+            <Route path="/chat/:sessionId" element={
+              <PageWrapper>
+                <Chat />
+              </PageWrapper>
+            } />
+            <Route path="/image" element={
+              <PageWrapper>
+                <ImageGen />
+              </PageWrapper>
+            } />
+            <Route path="/video" element={
+              <PageWrapper>
+                <VideoGen />
+              </PageWrapper>
+            } />
+            <Route path="/3d" element={
+              <PageWrapper>
+                <ThreeDGen />
+              </PageWrapper>
+            } />
+            <Route path="/models" element={
+              <PageWrapper>
+                <Models />
+              </PageWrapper>
+            } />
+            <Route path="/live" element={
+              <PageWrapper>
+                <Live />
+              </PageWrapper>
+            } />
+            <Route path="/profile" element={
+              <PageWrapper>
+                <Profile />
+              </PageWrapper>
+            } />
+            <Route path="/docs" element={
+              <PageWrapper>
+                <Docs />
+              </PageWrapper>
+            } />
+            <Route path="/about" element={
+              <PageWrapper>
+                <About />
+              </PageWrapper>
+            } />
+            <Route path="/agent" element={
+              <PageWrapper>
+                <Agent />
+              </PageWrapper>
+            } />
+            <Route path="/agent/:sessionId" element={
+              <PageWrapper>
+                <Agent />
+              </PageWrapper>
+            } />
+            <Route path="/login" element={
+              <PageWrapper>
+                <Login />
+              </PageWrapper>
+            } />
+            <Route path="/signup" element={
+              <PageWrapper>
+                <Signup />
+              </PageWrapper>
+            } />
+          </Routes>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
@@ -249,7 +179,6 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
-      className="flex-1 flex flex-col w-full h-full"
     >
       {children}
     </motion.div>
