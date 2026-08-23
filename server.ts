@@ -6,7 +6,7 @@ import { WebSocketServer } from "ws";
 import { createServer as createHttpServer } from "http";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { STEVE_SYSTEM_INSTRUCTION } from "./src/constants";
-import { app } from "./api/index";
+import { app } from "./api/index.js";
 
 dotenv.config();
 
