@@ -49,7 +49,7 @@ export const AdBanner: React.FC<{ zone: 'top' | 'bottom' }> = ({ zone }) => {
           title="Ad Banner Top"
         />
       ) : (
-        /* Bottom Banner (Invoke Container Unit) */
+        /* Bottom Banner (300x160 or Invoke Container) */
         <iframe
           srcDoc={`
             <html>
@@ -59,7 +59,7 @@ export const AdBanner: React.FC<{ zone: 'top' | 'bottom' }> = ({ zone }) => {
               </body>
             </html>
           `}
-          style={{ width: '320px', height: '60px', border: 'none' }}
+          style={{ width: '320px', height: '160px', border: 'none' }}
           title="Ad Banner Bottom"
         />
       )}
