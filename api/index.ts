@@ -2,8 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { GoogleGenAI, Modality } from "@google/genai";
-import { MODELS } from "../src/types";
-import { STEVE_SYSTEM_INSTRUCTION } from "../src/constants";
+// ✅ WORKS (Explicitly add .js extensions):
+import { MODELS } from "../src/types.js";
+import { STEVE_SYSTEM_INSTRUCTION } from "../src/constants.js";
 
 dotenv.config();
 
