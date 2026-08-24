@@ -22,6 +22,7 @@ import { cn } from "./lib/utils";
 import { doc, setDoc, getDoc, onSnapshot as onSnapshotDoc } from "firebase/firestore";
 import { UserSettings } from "./types";
 import { SettingsModal, CreditsModal, ActivityModal } from "./components/Modals";
+import { AdBanner } from "./components/AdBanner"; // Import AdBanner
 
 // Auth Context
 interface AuthContextType {
@@ -79,94 +80,41 @@ function AnimatedRoutes() {
   const isAgentPage = location.pathname === "/agent";
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
   const showSidebar = (isChatPage || isImagePage || isVideoPage || isThreeDPage || isModelsPage || isLivePage || isAgentPage) && !isAuthPage;
-  const hideNavbar = isAuthPage;
 
   return (
     <div className="flex min-h-screen bg-black">
       {showSidebar && <Sidebar />}
       <main className={cn(
-        "flex-1 transition-all duration-300",
+        "flex-1 transition-all duration-300 flex flex-col min-h-screen",
         (showSidebar && isOpen) ? "lg:ml-72" : "ml-0"
       )}>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname.split('/')[1] || "home"}>
-            <Route path="/" element={
-              <PageWrapper>
-                <Home />
-              </PageWrapper>
-            } />
-            <Route path="/chat" element={
-              <PageWrapper>
-                <Chat />
-              </PageWrapper>
-            } />
-            <Route path="/chat/:sessionId" element={
-              <PageWrapper>
-                <Chat />
-              </PageWrapper>
-            } />
-            <Route path="/image" element={
-              <PageWrapper>
-                <ImageGen />
-              </PageWrapper>
-            } />
-            <Route path="/video" element={
-              <PageWrapper>
-                <VideoGen />
-              </PageWrapper>
-            } />
-            <Route path="/3d" element={
-              <PageWrapper>
-                <ThreeDGen />
-              </PageWrapper>
-            } />
-            <Route path="/models" element={
-              <PageWrapper>
-                <Models />
-              </PageWrapper>
-            } />
-            <Route path="/live" element={
-              <PageWrapper>
-                <Live />
-              </PageWrapper>
-            } />
-            <Route path="/profile" element={
-              <PageWrapper>
-                <Profile />
-              </PageWrapper>
-            } />
-            <Route path="/docs" element={
-              <PageWrapper>
-                <Docs />
-              </PageWrapper>
-            } />
-            <Route path="/about" element={
-              <PageWrapper>
-                <About />
-              </PageWrapper>
-            } />
-            <Route path="/agent" element={
-              <PageWrapper>
-                <Agent />
-              </PageWrapper>
-            } />
-            <Route path="/agent/:sessionId" element={
-              <PageWrapper>
-                <Agent />
-              </PageWrapper>
-            } />
-            <Route path="/login" element={
-              <PageWrapper>
-                <Login />
-              </PageWrapper>
-            } />
-            <Route path="/signup" element={
-              <PageWrapper>
-                <Signup />
-              </PageWrapper>
-            } />
-          </Routes>
-        </AnimatePresence>
+        {/* Top Ad Banner */}
+        <AdBanner zone="top" />
+
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname.split('/')[1] || "home"}>
+              <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
+              <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
+              <Route path="/chat/:sessionId" element={<PageWrapper><Chat /></PageWrapper>} />
+              <Route path="/image" element={<PageWrapper><ImageGen /></PageWrapper>} />
+              <Route path="/video" element={<PageWrapper><VideoGen /></PageWrapper>} />
+              <Route path="/3d" element={<PageWrapper><ThreeDGen /></PageWrapper>} />
+              <Route path="/models" element={<PageWrapper><Models /></PageWrapper>} />
+              <Route path="/live" element={<PageWrapper><Live /></PageWrapper>} />
+              <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
+              <Route path="/docs" element={<PageWrapper><Docs /></PageWrapper>} />
+              <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
+              <Route path="/agent" element={<PageWrapper><Agent /></PageWrapper>} />
+              <Route path="/agent/:sessionId" element={<PageWrapper><Agent /></PageWrapper>} />
+              <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+              <Route path="/signup" element={<PageWrapper><Signup /></PageWrapper>} />
+            </Routes>
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom Ad Banner */}
+        <AdBanner zone="bottom" />
       </main>
     </div>
   );
@@ -233,7 +181,6 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
-          // Sync user to Firestore
           const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
           
@@ -293,9 +240,7 @@ export default function App() {
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
-                  <Route path="*" element={
-                    <NavbarWrapper />
-                  } />
+                  <Route path="*" element={<NavbarWrapper />} />
                 </Routes>
               </Router>
               
@@ -317,9 +262,6 @@ function NavbarWrapper() {
   const isImagePage = location.pathname === "/image";
   const isVideoPage = location.pathname === "/video";
   const isThreeDPage = location.pathname === "/3d";
-  const isModelsPage = location.pathname === "/models";
-  const isLivePage = location.pathname === "/live";
-  const isProfilePage = location.pathname === "/profile";
   const isAgentPage = location.pathname === "/agent";
   const hideNavbar = isChatPage || isImagePage || isVideoPage || isThreeDPage || isAgentPage;
 
